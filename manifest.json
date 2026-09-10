@@ -1,0 +1,17 @@
+{
+  "name": "Raldi Produção",
+  "short_name": "Produção",
+  "description": "Ordens de Produção — Raldi Móveis com Precisão",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1c1d20",
+  "theme_color": "#982424",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "icons": [
+    { "src": "https://i.postimg.cc/9MsBrnJd/app-icone.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "https://i.postimg.cc/9MsBrnJd/app-icone.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

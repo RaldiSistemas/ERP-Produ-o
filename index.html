@@ -1,0 +1,3054 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raldi Produção — Ordens de Produção</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="https://i.postimg.cc/ZKKbdCCF/image-removebg-preview-(18).png">
+<meta name="theme-color" content="#982424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Produção">
+<link rel="apple-touch-icon" href="https://i.postimg.cc/9MsBrnJd/app-icone.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --vermelho:#982424; --vermelho-2:#7f1e1e;
+    --fundo:#DBDBD3; --texto:#4B4B55;
+    --rail:#232428; --surface:#ffffff; --content:#ecece6;
+    --linha:rgba(75,75,85,.14); --muted:color-mix(in srgb,var(--texto) 62%,transparent);
+    --submenu:#f2f2ec;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ font-family:'Archivo',system-ui,sans-serif; color:var(--texto); background:var(--content);
+    -webkit-font-smoothing:antialiased; height:100dvh; overflow:hidden; }
+
+  .screen{ position:fixed; inset:0; opacity:0; visibility:hidden; transition:opacity .4s ease, visibility .4s; }
+  .screen.active{ opacity:1; visibility:visible; }
+
+  /* ===== Login — terminal industrial ===== */
+  .screen--login{ background:#1c1d20; display:flex; align-items:stretch; padding:0; }
+  .tm{ position:relative; flex:1; display:grid; grid-template-rows:auto 1fr auto; overflow:hidden; }
+  .tm::before{ content:""; position:absolute; inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:52px 52px; pointer-events:none; }
+  .tm::after{ content:""; position:absolute; width:640px; height:640px; border-radius:50%;
+    background:radial-gradient(circle,rgba(152,36,36,.28) 0%,transparent 65%);
+    top:-260px; right:-200px; pointer-events:none; }
+
+  .tm-faixa{ position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    gap:20px; padding:16px 30px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .tmf-t{ font-size:10.5px; font-weight:800; letter-spacing:.42em; text-transform:uppercase; color:var(--vermelho); }
+  .tmf-b{ display:flex; align-items:flex-end; gap:3px; height:20px; opacity:.35; }
+  .tmf-b i{ display:block; width:3px; background:#fff; border-radius:1px; }
+  .tmf-b i:nth-child(3n){ width:5px; height:20px; }
+  .tmf-b i:nth-child(2n){ height:13px; }
+  .tmf-b i:nth-child(4n){ height:20px; width:2px; }
+  .tmf-b i{ height:17px; }
+
+  .tm-corpo{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:30px 24px; }
+  .tm-marca{ display:flex; align-items:center; gap:13px; margin-bottom:26px; }
+  .tm-marca img{ height:44px; filter:brightness(0) invert(1); opacity:.95; }
+  .tm-nome{ font-family:'Poppins',sans-serif; font-weight:600; font-size:36px; color:#fff; letter-spacing:-.015em; }
+  .tm-h{ font-family:'Poppins',sans-serif; font-size:27px; font-weight:600; color:#fff; letter-spacing:-.01em; text-align:center; }
+  .tm-p{ font-size:14px; color:rgba(255,255,255,.45); margin:8px 0 30px; text-align:center; max-width:340px; line-height:1.55; }
+
+  .tm-form{ width:min(400px,100%); }
+  .tm-f{ margin-bottom:16px; }
+  .tm-f label{ display:block; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+    color:rgba(255,255,255,.45); margin-bottom:8px; }
+  .tm-f input{ width:100%; font:inherit; font-size:17px; padding:16px 18px; border:1.5px solid rgba(255,255,255,.14);
+    border-radius:12px; background:rgba(255,255,255,.05); color:#fff; transition:border-color .15s,background .15s; }
+  .tm-f input::placeholder{ color:rgba(255,255,255,.28); }
+  .tm-f input:focus{ outline:0; border-color:var(--vermelho); background:rgba(255,255,255,.09); }
+  .tm-senha{ position:relative; display:flex; align-items:center; }
+  .tm-senha input{ padding-right:56px; }
+  .tm-eye{ position:absolute; right:8px; width:40px; height:40px; border:0; background:transparent;
+    color:rgba(255,255,255,.4); cursor:pointer; border-radius:9px; display:grid; place-items:center; }
+  .tm-eye:hover{ background:rgba(255,255,255,.08); color:#fff; }
+  .tm-eye svg{ width:20px; height:20px; }
+  .tm-err{ font-size:13px; font-weight:600; color:#e57373; min-height:20px; margin-bottom:8px; }
+  .tm-btn{ display:flex; align-items:center; justify-content:center; gap:11px; width:100%; font:inherit;
+    font-size:17px; font-weight:700; padding:17px; border:0; border-radius:12px; background:var(--vermelho);
+    color:#fff; cursor:pointer; letter-spacing:.01em; transition:background .15s,transform .1s;
+    box-shadow:0 8px 24px rgba(152,36,36,.35); }
+  .tm-btn:hover{ background:#b02a2a; }
+  .tm-btn:active{ transform:translateY(1px); }
+  .tm-btn:disabled{ opacity:.45; box-shadow:none; cursor:default; }
+  .tm-btn svg{ width:20px; height:20px; }
+
+  .tm-pe{ position:relative; z-index:2; display:flex; align-items:center; justify-content:center; gap:14px;
+    padding:16px 30px; border-top:1px solid rgba(255,255,255,.08);
+    font-size:11.5px; color:rgba(255,255,255,.32); }
+  .tm-sep{ width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.25); }
+  #tmRelogio{ font-family:ui-monospace,monospace; letter-spacing:.08em; }
+
+  .lg-diag{ width:min(400px,100%); font-size:12px; line-height:1.55; margin-top:22px; padding:12px 14px;
+    border-radius:10px; text-align:center; }
+  .lg-diag:empty{ display:none; }
+  .lg-diag.ok{ background:rgba(255,255,255,.05); color:rgba(255,255,255,.4); }
+  .lg-diag.ok b{ color:rgba(255,255,255,.7); }
+  .lg-diag.erro{ background:rgba(152,36,36,.16); border:1px solid rgba(152,36,36,.4); color:#f0a6a6; text-align:left; }
+  .lg-diag.erro b{ display:block; color:#fff; margin-bottom:4px; }
+
+  @media(max-width:520px){
+    .tm-nome{ font-size:30px; } .tm-marca img{ height:36px; }
+    .tm-h{ font-size:22px; } .tm-corpo{ padding:24px 18px; }
+    .tmf-b{ display:none; }
+  }
+  @media(max-height:620px){
+    .tm-marca{ margin-bottom:16px; } .tm-p{ margin-bottom:20px; }
+  }
+
+  /* ===== Shell ===== */
+  .shell{ display:flex; flex-direction:column; height:100dvh; }
+  .top{ background:var(--rail); display:flex; align-items:center; gap:18px; padding:0 20px;
+    height:62px; flex:0 0 62px; }
+  .top-brand{ display:flex; align-items:center; gap:11px; }
+  .top-brand img{ height:32px; filter:brightness(0) invert(1); }
+  .tb-t{ line-height:1; }
+  .tb-t b{ display:block; font-family:'Poppins',sans-serif; font-size:17px; font-weight:600; color:#fff; }
+  .tb-t span{ display:block; font-size:8px; font-weight:700; letter-spacing:.3em; text-transform:uppercase;
+    color:rgba(255,255,255,.5); margin-top:3px; }
+  .top-nav{ display:flex; gap:3px; margin-left:14px; flex:1; overflow-x:auto; }
+  .tn{ font:inherit; font-size:14px; font-weight:600; color:rgba(255,255,255,.62); background:transparent;
+    border:0; padding:9px 16px; border-radius:9px; cursor:pointer; white-space:nowrap; transition:background .14s,color .14s; }
+  .tn:hover{ background:rgba(255,255,255,.08); color:#fff; }
+  .tn.on{ background:var(--vermelho); color:#fff; }
+  .top-dir{ display:flex; align-items:center; gap:12px; }
+  .td-user{ font-size:12.5px; color:rgba(255,255,255,.6); max-width:170px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .td-b{ border:0; background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); cursor:pointer;
+    width:36px; height:36px; border-radius:9px; display:grid; place-items:center; }
+  .td-b:hover{ background:var(--vermelho); color:#fff; }
+  .td-b svg{ width:18px; height:18px; }
+  .corpo{ flex:1; overflow-y:auto; padding:26px 24px 40px; }
+  .sync-off{ position:fixed; top:0; left:0; right:0; background:var(--vermelho); color:#fff; font-size:13px;
+    font-weight:600; text-align:center; padding:7px; z-index:200; display:none; }
+  .sync-off.show{ display:block; }
+  @media(max-width:700px){
+    .top{ height:auto; flex-wrap:wrap; padding:10px 14px; gap:10px; }
+    .top-nav{ order:3; width:100%; margin-left:0; }
+    .td-user{ display:none; }
+    .corpo{ padding:18px 14px 34px; }
+  }
+
+  /* ===== Base reaproveitada ===== */
+  .page{ max-width:1320px; margin:0 auto; }
+  .page-wide{ max-width:1480px; }
+  .page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; }
+  .page-title{ font-size:24px; font-weight:700; color:var(--texto); }
+  .page-sub{ font-size:13px; color:var(--muted); margin-top:3px; }
+  .btn{ font:inherit; font-weight:600; font-size:14px; border-radius:9px; padding:10px 18px; cursor:pointer;
+    border:1px solid transparent; transition:background .15s; }
+  .btn-primary{ background:var(--vermelho); color:#fff; }
+  .btn-primary:hover{ background:var(--vermelho-2); }
+  .btn-ghost{ background:var(--surface); color:var(--texto); border-color:var(--linha); }
+  .btn-ghost:hover{ background:rgba(75,75,85,.06); }
+  .btn-sm{ padding:6px 13px; font-size:13px; }
+  .btn:disabled{ cursor:default; }
+  .link-btn{ border:0; background:transparent; color:var(--vermelho); font:inherit; font-weight:600; font-size:13px; cursor:pointer; }
+  .search{ font:inherit; font-size:14px; padding:10px 13px; border:1px solid var(--linha); border-radius:9px;
+    background:var(--surface); color:var(--texto); }
+  .search:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .toolbar{ margin-bottom:14px; }
+  .table-wrap{ background:var(--surface); border:1px solid var(--linha); border-radius:12px; overflow:hidden; }
+  .table-scroll{ overflow-x:auto; }
+  .tbl{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .tbl th{ text-align:left; font-weight:600; font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--muted); padding:9px 14px; border-bottom:1px solid var(--linha); background:#faf9f5; white-space:nowrap; }
+  .tbl td{ padding:8px 14px; border-bottom:1px solid var(--linha); color:var(--texto); vertical-align:middle; line-height:1.35; }
+  .tbl tr:last-child td{ border-bottom:0; }
+  .tbl tbody tr:hover td{ background:rgba(75,75,85,.03); }
+  .cel-nome{ font-weight:600; }
+  .cel-sub{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .cel-disc{ font-size:12.5px; color:color-mix(in srgb,var(--texto) 82%,transparent); }
+  .ctr{ text-align:center; }
+  .acoes{ text-align:right; white-space:nowrap; }
+  .td-empty{ text-align:center; color:var(--muted); padding:22px; }
+  .icon-btn{ border:0; background:transparent; color:var(--muted); cursor:pointer; padding:5px; border-radius:6px; line-height:0; }
+  .icon-btn:hover{ background:rgba(75,75,85,.08); color:var(--texto); }
+  .icon-btn.danger:hover{ background:rgba(152,36,36,.1); color:var(--vermelho); }
+  .icon-btn.is-off{ opacity:.3; cursor:not-allowed; }
+  .icon-btn svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .fs{ background:var(--surface); border:1px solid var(--linha); border-radius:12px; padding:18px 20px 20px; }
+  .fs-title{ font-size:12.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--vermelho); margin-bottom:16px; }
+  .fs-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px 18px; }
+  .fld{ display:flex; flex-direction:column; gap:6px; }
+  .fld.full{ grid-column:1/-1; }
+  .fld.small{ max-width:130px; }
+  .fld label{ font-size:12.5px; font-weight:600; color:var(--texto); }
+  .fld label i{ color:var(--vermelho); font-style:normal; margin-left:2px; }
+  .fld input,.fld select,.fld textarea{ font:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--linha);
+    border-radius:8px; background:#fff; color:var(--texto); width:100%; }
+  .fld input:focus,.fld select:focus,.fld textarea:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .fld textarea{ min-height:76px; resize:vertical; }
+  .fld-hint{ font-size:11.5px; color:var(--muted); margin-top:4px; display:block; }
+  .aviso{ font-size:13px; color:var(--muted); background:#faf9f5; border:1px dashed var(--linha); border-radius:8px; padding:10px 12px; }
+  .wiz-nav{ display:flex; justify-content:space-between; gap:10px; margin-top:20px; }
+  .empty{ text-align:center; padding:56px 20px; background:var(--surface); border:1px dashed var(--linha); border-radius:14px; }
+  .empty .e-ic{ width:56px; height:56px; margin:0 auto 14px; border-radius:14px; background:rgba(152,36,36,.08);
+    color:var(--vermelho); display:grid; place-items:center; }
+  .empty .e-ic svg{ width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .empty h3{ font-size:16px; font-weight:700; color:var(--texto); margin-bottom:6px; }
+  .empty p{ font-size:13.5px; color:var(--muted); margin-bottom:16px; }
+  .ck{ width:16px; height:16px; accent-color:var(--vermelho); cursor:pointer; }
+  .row-sel td{ background:rgba(152,36,36,.05) !important; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; background:rgba(152,36,36,.09); color:var(--vermelho);
+    font-size:13px; font-weight:600; padding:5px 8px 5px 12px; border-radius:999px; }
+  .chip button{ border:0; background:transparent; color:var(--vermelho); cursor:pointer; line-height:0; padding:2px; border-radius:50%; }
+  .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; flex:0 0 9px; }
+  .dot-lg{ width:12px; height:12px; flex:0 0 12px; box-shadow:0 0 0 3px rgba(0,0,0,.05); }
+  .st-resumo{ display:flex; gap:18px; flex-wrap:wrap; margin-bottom:14px; padding:12px 16px;
+    background:var(--surface); border:1px solid var(--linha); border-radius:10px; }
+  .st-item{ display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted); }
+  .st-item b{ color:var(--texto); font-weight:700; }
+  .st-sel{ font:inherit; font-size:12.5px; padding:4px 8px; border:1px solid var(--linha); border-radius:7px;
+    background:#fff; color:var(--texto); cursor:pointer; }
+  .st-sel:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .st-ro{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; }
+  .inv-filtros{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+  .inv-filtros .search{ flex:1; min-width:230px; }
+  .inv-filtros select{ font:inherit; font-size:13.5px; padding:10px 12px; border:1px solid var(--linha);
+    border-radius:9px; background:var(--surface); color:var(--texto); min-width:170px; }
+  .inv-filtros select:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .op-tempo{ font-weight:700; }
+  .op-fora{ color:#8a5a13 !important; font-weight:600; }
+  .qt-row{ display:flex; align-items:center; gap:9px; }
+  .qt-row input{ flex:1; }
+  .cod-prev{ font-family:ui-monospace,monospace; font-size:15px; font-weight:600; color:var(--vermelho);
+    background:rgba(152,36,36,.07); border:1px dashed rgba(152,36,36,.3); border-radius:8px; padding:10px 12px; }
+  .toast{ position:fixed; left:50%; bottom:28px; transform:translate(-50%,20px); background:var(--texto); color:#f4f4ef;
+    font-size:14px; font-weight:500; padding:13px 20px; border-radius:10px; opacity:0; pointer-events:none;
+    transition:opacity .25s,transform .25s; z-index:300; }
+  .toast.show{ opacity:1; transform:translate(-50%,0); }
+  .rx-ov{ position:fixed; inset:0; background:rgba(35,36,40,.5); display:none; align-items:center;
+    justify-content:center; padding:20px; z-index:250; overflow-y:auto; }
+  .rx-ov.open{ display:flex !important; }
+  .rx-box{ width:min(560px,100%); background:var(--surface); border-radius:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,.28); overflow:hidden; }
+  .rx-h{ display:flex; align-items:center; justify-content:space-between; padding:17px 20px; border-bottom:1px solid var(--linha); }
+  .rx-h h3{ font-size:17px; font-weight:700; color:var(--texto); }
+  .rx-b{ padding:20px; max-height:66vh; overflow-y:auto; }
+  .rx-b select{ font:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--linha);
+    border-radius:8px; background:#fff; color:var(--texto); width:100%; }
+  .rx-b select:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .rx-f{ display:flex; justify-content:flex-end; gap:10px; padding:15px 20px; background:#faf9f5; border-top:1px solid var(--linha); }
+  .ficha-overlay{ position:fixed; inset:0; background:rgba(35,36,40,.55); display:none; flex-direction:column;
+    align-items:center; padding:26px 16px; overflow-y:auto; z-index:240; }
+  .ficha-overlay.open{ display:flex; }
+  .ficha-actions{ display:flex; gap:10px; justify-content:flex-end; margin-bottom:12px; }
+  .col-ordem{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .col-ordem span{ font-size:11px; color:var(--muted); background:#f4f3ef; padding:3px 8px; border-radius:5px; }
+  .col-ordem b{ color:var(--vermelho); font-family:ui-monospace,monospace; margin-right:3px; }
+  .col-txt{ width:100%; min-height:120px; font-family:ui-monospace,monospace; font-size:12px;
+    padding:11px 13px; border:1px solid var(--linha); border-radius:9px; resize:vertical; color:var(--texto); }
+  .col-txt:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .col-prev{ margin-top:14px; }
+  .cp-r{ font-size:13px; color:var(--muted); margin-bottom:9px; }
+  .cp-r b{ color:var(--texto); }
+  .cp-w{ display:inline-block; font-size:11px; color:#8a5a13; background:#fdf1dc; padding:2px 8px; border-radius:5px; margin-left:6px; }
+  .cp-t{ width:100%; border-collapse:collapse; font-size:11.5px; }
+  .cp-t th{ text-align:left; font-size:9.5px; font-weight:700; text-transform:uppercase; color:var(--muted);
+    padding:5px 7px; background:#faf9f5; border-bottom:1px solid var(--linha); white-space:nowrap; }
+  .cp-t td{ padding:5px 7px; border-bottom:1px solid var(--linha); color:var(--texto);
+    max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cp-m{ text-align:center; color:var(--muted); font-style:italic; }
+  .chk{ display:flex; align-items:flex-start; gap:9px; cursor:pointer; font-size:13.5px; color:var(--texto); }
+  .chk input{ width:17px; height:17px; accent-color:var(--vermelho); margin-top:1px; flex:0 0 17px; cursor:pointer; }
+  .chk i{ display:block; font-style:normal; font-size:11.5px; color:var(--muted); margin-top:2px; }
+/* Relatório do projeto */
+  .rp-topo{ display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:stretch; margin-bottom:18px; }
+  @media(max-width:760px){ .rp-topo{ grid-template-columns:1fr; } }
+  .rp-donut{ display:flex; align-items:center; gap:16px; background:var(--surface);
+    border:1px solid var(--linha); border-radius:13px; padding:16px 22px; }
+  .dn{ width:118px; height:118px; flex:0 0 118px; }
+  .rpd-l b{ display:block; font-size:16px; }
+  .rpd-l span{ display:block; font-size:12.5px; color:var(--muted); margin-top:3px; max-width:150px; line-height:1.45; }
+  .rp-kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media(min-width:1100px){ .rp-kpis{ grid-template-columns:repeat(4,1fr); } }
+  .rpk{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:15px 17px;
+    display:flex; flex-direction:column; justify-content:center; }
+  .rk-v{ font-family:'Poppins',sans-serif; font-size:22px; font-weight:700; color:var(--texto); line-height:1.1; }
+  .rk-l{ font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-top:5px; }
+  .rp-cols{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media(max-width:860px){ .rp-cols{ grid-template-columns:1fr; } }
+  .rs-l{ margin-bottom:14px; }
+  .rs-l:last-child{ margin-bottom:0; }
+  .rs-h{ display:flex; align-items:baseline; gap:8px; font-size:12.5px; }
+  .rs-h b{ font-size:12px; font-weight:800; }
+  .rs-h span{ flex:1; color:var(--muted); }
+  .rs-h i{ font-style:normal; font-weight:700; color:var(--texto); }
+  .rs-bar{ height:8px; background:#e6e6de; border-radius:999px; overflow:hidden; margin:6px 0 3px; }
+  .rs-bar span{ display:block; height:100%; border-radius:999px; }
+  .rs-t{ font-size:11px; color:var(--muted); }
+  .rf-l{ display:flex; align-items:center; gap:12px; margin-bottom:11px; }
+  .rf-l:last-child{ margin-bottom:0; }
+  .rf-n{ width:130px; flex:0 0 130px; font-size:13px; font-weight:600; color:var(--texto);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rf-n i{ display:block; font-style:normal; font-size:10.5px; font-weight:400; color:var(--muted); }
+  .rf-bar{ flex:1; height:20px; background:#f1f0ea; border-radius:5px; overflow:hidden; }
+  .rf-bar span{ display:block; height:100%; background:linear-gradient(90deg,var(--vermelho),#b83535); border-radius:5px; }
+  .rf-t{ width:74px; flex:0 0 74px; text-align:right; font-size:13px; font-weight:700; color:var(--texto); }
+  .tag-lote{ font-style:normal; font-size:9px; font-weight:800; text-transform:uppercase; color:#2f6fb5;
+    background:rgba(47,111,181,.11); padding:1px 5px; border-radius:4px; margin-left:7px; }
+  .sem-op{ font-size:11.5px; color:var(--muted); font-style:italic; }
+  .tl{ position:relative; padding-left:20px; }
+  .tl::before{ content:""; position:absolute; left:5px; top:6px; bottom:6px; width:2px; background:var(--linha); }
+  .tl-i{ position:relative; padding:9px 0; }
+  .tl-p{ position:absolute; left:-19px; top:15px; width:11px; height:11px; border-radius:50%;
+    border:2px solid var(--surface); box-shadow:0 0 0 1px rgba(0,0,0,.06); }
+  .tl-h{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .tl-h b{ font-size:13.5px; color:var(--texto); }
+  .tl-h em{ font-style:normal; font-size:11.5px; color:var(--muted); }
+  .tl-f{ font-style:normal; font-size:9.5px; font-weight:700; text-transform:uppercase; color:#8a5a13;
+    background:#fdf1dc; padding:1px 6px; border-radius:4px; }
+  .tl-d{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .tl-d b{ color:var(--texto); }
+  @media print{
+    .rail,.submenu,.topbar,.content-top,.page-head .btn{ display:none !important; }
+    .rp-donut,.rpk,.fs{ break-inside:avoid; }
+    .rf-bar span,.rs-bar span,.dn{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+
+  /* hierarquia por coluna */
+  .pl-lote{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px; color:#2f6fb5; text-align:center; }
+  .pl-projeto{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px; color:var(--texto); text-align:center; }
+  .pl-cliente{ font-weight:600; }
+  .pl-rep{ color:#a8a8a0; font-weight:400; }
+  .pl-ambiente{ font-weight:600; color:#3a3a42; }
+  .pl-telefone,.pl-consultor,.pl-local{ color:#6f6f78; }
+  .pl-dataEntrada{ color:#6f6f78; font-variant-numeric:tabular-nums; }
+  .pl-vaz{ background:transparent; }
+  .pl-ac{ text-align:center; padding:0 4px !important; }
+  .tbl-painel tr.pl-r .pl-ac .icon-btn{ opacity:0; transition:opacity .12s; }
+  .tbl-painel tr.pl-r:hover .pl-ac .icon-btn,.tbl-painel tr.row-sel .pl-ac .icon-btn{ opacity:1; }
+  @media(max-width:900px){ }
+
+  /* Rendimento */
+  @media(max-width:1000px){ .rd-filtros{ grid-template-columns:1fr 1fr; } }
+  .rf-c{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .rf-c > label{ font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .rf-c input,.rf-c select{ font:inherit; font-size:13.5px; padding:9px 11px; border:1px solid var(--linha);
+    border-radius:9px; background:#fff; color:var(--texto); width:100%; }
+  .rf-c input:focus,.rf-c select:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .rf-datas{ display:flex; align-items:center; gap:8px; }
+  .rf-datas span{ font-size:12px; color:var(--muted); }
+  .rf-at{ display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
+  .rf-b{ font:inherit; font-size:11.5px; font-weight:600; padding:4px 10px; border:1px solid var(--linha);
+    border-radius:999px; background:#faf9f5; color:var(--muted); cursor:pointer; }
+  .rf-b:hover{ border-color:var(--vermelho); color:var(--vermelho); background:#fff; }
+  .rf-lim{ align-self:end; white-space:nowrap; }
+
+  .rd-topo{ display:grid; grid-template-columns:1.5fr auto 1.6fr; gap:14px; margin-bottom:18px; align-items:stretch; }
+  @media(max-width:1000px){ .rd-topo{ grid-template-columns:1fr; } }
+  .rd-big{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:18px 20px;
+    display:flex; flex-direction:column; justify-content:center; }
+  .rb-l{ font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .rb-v{ font-family:'Poppins',sans-serif; font-size:36px; font-weight:700; color:var(--texto); line-height:1.05; margin-top:4px; }
+  .rb-split{ display:flex; gap:16px; flex-wrap:wrap; margin-top:11px; font-size:11.5px; color:var(--muted); }
+  .rb-split span{ display:flex; align-items:center; gap:6px; }
+  .rb-split i{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .rb-split b{ color:var(--texto); font-size:12.5px; }
+  .rb-bar{ display:flex; height:9px; border-radius:999px; overflow:hidden; background:#eceae4; margin-top:11px; }
+  .rb-bar span{ height:100%; }
+  .rd-mini{ display:flex; gap:10px; align-items:center; }
+  .rdm{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:10px; }
+  .dn-s{ width:104px; height:104px; display:block; }
+  .rd-nums{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media(min-width:1200px){ .rd-nums{ grid-template-columns:repeat(4,1fr); } }
+  .rdn{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:14px 15px;
+    display:flex; flex-direction:column; justify-content:center; }
+  .rdn b{ font-family:'Poppins',sans-serif; font-size:22px; font-weight:700; color:var(--texto); line-height:1.1; }
+  .rdn span{ font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+
+  .gd{ display:flex; align-items:flex-end; gap:3px; height:130px; padding-top:8px; }
+  .gd-c{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    height:100%; min-width:5px; cursor:default; }
+  .gd-b{ width:100%; max-width:26px; background:var(--vermelho); border-radius:3px 3px 0 0;
+    transition:opacity .12s; min-height:0; }
+  .gd-c:hover .gd-b{ opacity:.75; }
+  .gd-b.fds{ background:#cfcdc4; }
+  .gd-x{ font-size:8.5px; color:var(--muted); margin-top:5px; font-variant-numeric:tabular-nums; }
+  .gd-leg{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+  .gd-leg i{ width:10px; height:10px; border-radius:2px; background:#cfcdc4; display:inline-block; }
+
+  .set-bar{ display:flex; height:26px; border-radius:7px; overflow:hidden; background:#eceae4; margin-bottom:13px; }
+  .set-bar span{ height:100%; }
+  .set-l{ display:flex; align-items:center; gap:9px; font-size:12.5px; padding:5px 0; }
+  .set-l i{ width:10px; height:10px; border-radius:2px; flex:0 0 10px; }
+  .set-l b{ font-weight:800; font-size:11px; min-width:38px; }
+  .set-l span{ flex:1; color:var(--muted); }
+  .set-l em{ font-style:normal; font-weight:600; color:var(--texto); }
+
+  .rd-l{ display:flex; align-items:center; gap:13px; padding:11px 4px; border-bottom:1px solid var(--linha); cursor:pointer; }
+  .rd-l:last-of-type{ border-bottom:0; }
+  .rd-l:hover{ background:rgba(75,75,85,.03); }
+  .rd-pos{ width:22px; height:22px; flex:0 0 22px; border-radius:50%; background:#f1f0ea; color:var(--muted);
+    font-size:11px; font-weight:800; display:grid; place-items:center; }
+  .rd-l:nth-of-type(2) .rd-pos{ background:var(--vermelho); color:#fff; }
+  .rd-n{ width:190px; flex:0 0 190px; font-size:14px; font-weight:600; color:var(--texto);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rd-n i{ display:block; font-style:normal; font-size:10.5px; font-weight:400; color:var(--muted); }
+  .rd-bar{ flex:1; height:20px; background:#f1f0ea; border-radius:6px; overflow:hidden; display:flex; min-width:60px; }
+  .rb-n{ background:var(--vermelho); height:100%; }
+  .rb-e{ background:#c77d1a; height:100%; }
+  .rd-t{ width:118px; flex:0 0 118px; text-align:right; font-size:14px; font-weight:700; color:var(--texto); }
+  .rd-t i{ display:block; font-style:normal; font-size:10px; font-weight:600; color:#c77d1a; }
+  .rd-ch{ width:16px; height:16px; color:var(--muted); flex:0 0 16px; }
+  .rd-leg{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:12px; padding-top:11px;
+    border-top:1px solid var(--linha); font-size:11.5px; color:var(--muted); }
+  .rd-leg span{ display:flex; align-items:center; gap:6px; }
+  .rd-leg i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .rd-obs{ margin-left:auto; font-style:italic; }
+  .tag-he{ font-style:normal; font-size:9px; font-weight:800; color:#c77d1a; background:rgba(199,125,26,.13);
+    padding:1px 5px; border-radius:4px; margin-left:7px; }
+
+  /* Painel de Controle — refinado */
+  .tbl-painel{ border-collapse:separate; border-spacing:0; }
+  .tbl-painel thead th{ position:sticky; top:0; z-index:3; background:#efeee8;
+    font-size:9.5px; font-weight:800; letter-spacing:.07em; padding:11px 9px;
+    border-bottom:1.5px solid #d4d2c8; white-space:nowrap; color:#6f6f78; }
+  .tbl-painel thead th.pl-th-lote,.tbl-painel thead th.pl-th-projeto{ text-align:center; }
+  .tbl-painel td{ padding:0; border-bottom:1px solid #f0eee8; vertical-align:middle; }
+  .tbl-painel tr.pl-r{ background:#fff; transition:background .1s; }
+  .tbl-painel tr.pl-par{ background:#fbfaf6; }
+  .tbl-painel tr.pl-novo td{ border-top:2px solid #ddd9cd; }
+  .tbl-painel tr.pl-r:hover{ background:#fdf8f5; }
+  .tbl-painel tr.row-sel{ background:rgba(152,36,36,.055) !important; }
+  .tbl-painel tr.pl-r:hover
+  .pl-ck{ text-align:center; padding:0 !important; }
+  td.pl-n{ text-align:center; font-size:10px; color:#bcbcb2; font-variant-numeric:tabular-nums;
+    font-family:ui-monospace,monospace; }
+  .pl-in{ font:inherit; font-size:13px; padding:10px 10px; border:0; width:100%;
+    background:transparent; color:var(--texto); border-radius:0; }
+  .pl-in::placeholder{ color:#cbc9c0; font-style:italic; font-size:12px; }
+  .pl-in:focus{ outline:2px solid var(--vermelho); outline-offset:-2px; background:#fffdf7;
+    position:relative; z-index:2; border-radius:5px; }
+  .pl-td{ border-right:1px solid #f4f2ec; }
+  .pl-td-dataEntrada{ border-right:0; }
+  .pl-lote{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px;
+    color:#2f6fb5; text-align:center; letter-spacing:.02em; }
+  .pl-lote-rep{ color:#b9cee2; font-weight:600; }
+  .pl-projeto{ font-family:ui-monospace,monospace; font-weight:700; font-size:12.5px;
+    color:var(--texto); text-align:center; letter-spacing:.02em; }
+  .pl-cliente{ font-weight:600; color:#3a3a42; }
+  .pl-rep{ color:#adadA5; font-weight:400; }
+  .pl-ambiente{ font-weight:600; color:#3a3a42; }
+  .pl-telefone,.pl-consultor,.pl-local{ color:#77777f; font-size:12.5px; }
+  .pl-dataEntrada{ color:#77777f; font-variant-numeric:tabular-nums; font-size:12.5px; }
+  .pl-ac{ text-align:center; padding:0 4px !important; }
+  .tbl-painel tr.pl-r .pl-ac .icon-btn{ opacity:0; transition:opacity .12s; }
+  .tbl-painel tr.pl-r:hover .pl-ac .icon-btn,.tbl-painel tr.row-sel .pl-ac .icon-btn{ opacity:1; }
+  .pl-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr)); gap:12px; margin-bottom:14px; }
+  .plc{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:14px 17px;
+    border-left:3px solid var(--vermelho); }
+  .plc b{ display:block; font-family:'Poppins',sans-serif; font-size:24px; font-weight:700;
+    color:var(--texto); line-height:1.1; }
+  .plc span{ display:block; font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); margin-top:5px; }
+  .pl-resumo{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+  .plr-b{ font:inherit; font-size:12px; color:var(--muted); background:#f2f1eb; border:1px solid transparent;
+    border-radius:9px; padding:6px 11px; cursor:pointer; display:flex; align-items:center; gap:7px;
+    transition:border-color .12s,background .12s; }
+  .plr-b.par{ background:#eaeff4; }
+  .plr-b:hover{ border-color:var(--vermelho); background:#fff; }
+  .plr-b b{ font-family:ui-monospace,monospace; color:var(--texto); font-size:12.5px; }
+  .plr-b span{ font-size:10px; font-weight:800; background:rgba(75,75,85,.13); color:var(--texto);
+    padding:1px 7px; border-radius:999px; }
+  .pl-dica svg{ width:18px; height:18px; color:#2f6fb5; flex:0 0 18px; }
+  @media(max-width:900px){ .pl-wrap{ max-height:none; } }
+
+
+  /* --- Painel de Controle: status de emissão de OP --- */
+  :root{ --pl-1:#2c2c34; --pl-2:#7b7b85; --pl-3:#c8c6bd; --pl-azul:#2f6fb5; --pl-linha:#eeece4; }
+  .pl-status{ display:flex; gap:9px; flex-wrap:wrap; margin-bottom:12px; }
+  .pls{ font:inherit; display:flex; align-items:center; gap:10px; background:var(--surface);
+    border:1px solid var(--linha); border-radius:12px; padding:9px 15px 9px 12px;
+    cursor:pointer; transition:border-color .12s, box-shadow .12s; }
+  .pls:hover{ border-color:var(--vermelho); box-shadow:0 1px 6px rgba(40,40,50,.07); }
+  .pls i{ width:9px; height:9px; border-radius:999px; flex:0 0 9px; }
+  .pls b{ font-family:'Poppins',sans-serif; font-size:18px; font-weight:700; color:var(--pl-1); line-height:1; }
+  .pls span{ font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--pl-2); }
+  .pls-bar{ flex:1 1 200px; min-width:170px; display:flex; align-items:center; gap:11px;
+    background:var(--surface); border:1px solid var(--linha); border-radius:12px; padding:9px 15px; }
+  .pls-bar .t{ flex:1; height:8px; border-radius:999px; background:#ebe9e0; overflow:hidden; display:flex; }
+  .pls-bar .t u{ display:block; height:100%; text-decoration:none; }
+  .pls-bar em{ font-style:normal; font-size:11.5px; font-weight:700; color:var(--pl-2); white-space:nowrap; }
+  .plr-b i{ width:7px; height:7px; border-radius:999px; flex:0 0 7px; }
+  .tbl-painel thead th.pl-th-emissao{ text-align:center; }
+  .pl-td-dataEntrada{ border-right:1px solid var(--pl-linha); }
+  .pl-td-emissao{ padding:0 10px !important; text-align:center; border-right:1px solid var(--pl-linha); }
+  .pl-badge{ display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:11px;
+    font-weight:700; padding:4px 9px; border-radius:999px; border:1px solid; white-space:nowrap;
+    cursor:pointer; transition:filter .12s, box-shadow .12s; }
+  .pl-badge:hover{ filter:brightness(.965); box-shadow:0 1px 4px rgba(40,40,50,.09); }
+  .pl-badge i{ width:6px; height:6px; border-radius:999px; background:currentColor; flex:0 0 6px; }
+  .pl-badge em{ font-style:normal; font-family:ui-monospace,monospace; font-size:10px; opacity:.62; }
+  .pl-b-nao{ color:#b3261e; background:#fdeceb; border-color:#f2d2cf; }
+  .pl-b-apoio,.pl-b-parcial{ color:#8a6100; background:#fdf4d6; border-color:#ecdda9; }
+  .pl-b-parcial i{ background:transparent; box-shadow:inset 0 0 0 2px currentColor; }
+  .pl-b-ok{ color:#1f7a3d; background:#e8f6ec; border-color:#c3e4ce; }
+  .pl-b-vazio{ color:var(--pl-3); background:transparent; border-color:transparent; cursor:default; }
+  .pl-b-vazio:hover{ filter:none; box-shadow:none; }
+  .ple-l{ display:flex; flex-direction:column; gap:2px; }
+  .ple-s{ font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--pl-2); margin:12px 0 5px; }
+  .ple-s:first-child{ margin-top:0; }
+  .ple-i{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px;
+    border:1px solid var(--pl-linha); font-size:13px; }
+  .ple-i.on{ background:#f4faf6; border-color:#d6ebde; }
+  .ple-i .mk{ width:16px; height:16px; border-radius:999px; flex:0 0 16px; display:grid;
+    place-items:center; font-size:10px; font-weight:800; color:#fff; }
+  .ple-i.on .mk{ background:#2f8f46; }
+  .ple-i.off .mk{ background:#dcd9cf; }
+  .ple-i b{ flex:1; font-weight:600; color:var(--pl-1); }
+  .ple-i u{ text-decoration:none; font-family:ui-monospace,monospace; font-size:11px; color:var(--pl-2); }
+  .ple-i s{ text-decoration:none; font-size:11px; color:var(--pl-3); }
+  .ple-tag{ font-size:9px; font-weight:800; text-transform:uppercase; color:var(--pl-azul);
+    background:rgba(47,111,181,.11); padding:1px 5px; border-radius:4px; }
+
+  /* Acompanhamento / emissão em lote */
+  .jor-mini{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+  .jor-mini input{ font:inherit; font-size:13px; padding:7px 9px; border:1px solid var(--linha); border-radius:7px; }
+  .em-prev{ margin-top:14px; background:#faf9f5; border:1px solid var(--linha); border-radius:10px; padding:14px 16px; }
+  .ep-n{ font-size:13px; color:var(--muted); }
+  .ep-n b{ font-family:'Poppins',sans-serif; font-size:26px; font-weight:700; color:var(--vermelho); margin-right:5px; }
+  .ep-l{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+  .ep-l span{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+  .ep-l i{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .ep-l b{ color:var(--texto); font-size:14px; }
+  .ep-l em{ font-style:normal; font-size:10.5px; opacity:.75; }
+  .ep-p{ font-size:12px; color:var(--muted); margin-top:10px; padding-top:9px; border-top:1px solid var(--linha); }
+  .ac-kpis{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+  @media(max-width:760px){ .ac-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .ack{ background:var(--surface); border:1px solid var(--linha); border-radius:12px; padding:15px 17px; }
+  .ak-c{ cursor:pointer; transition:border-color .12s; }
+  .ak-c:hover{ border-color:var(--vermelho); }
+  .ak-v{ display:block; font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; color:var(--vermelho); line-height:1.05; }
+  .ak-l{ display:block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+  .ak-bar{ height:6px; background:#e6e6de; border-radius:999px; overflow:hidden; margin-top:10px; }
+  .ak-bar i{ display:block; height:100%; background:var(--vermelho); border-radius:999px; }
+  .tbl-acomp .ac-row{ cursor:pointer; }
+  .tbl-acomp .ac-row:hover td{ background:rgba(75,75,85,.04); }
+  .ac-proj{ font-family:ui-monospace,monospace; font-size:12.5px; color:var(--texto); }
+  .ac-st b{ display:block; font-size:13px; color:var(--texto); }
+  .ac-st i{ font-style:normal; font-size:11px; font-weight:600; }
+  .ac-st.vazio{ font-size:12.5px; color:var(--muted); }
+  .ac-pct{ display:flex; align-items:center; gap:9px; }
+  .ac-pct > span{ font-size:14px; font-weight:700; min-width:38px; }
+  .ac-bar{ flex:1; height:7px; background:#e6e6de; border-radius:999px; overflow:hidden; }
+  .ac-bar i{ display:block; height:100%; border-radius:999px; }
+  .da-h{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; background:#faf9f5;
+    border:1px solid var(--linha); border-radius:10px; padding:13px 15px; margin-bottom:14px; }
+  .da-h span{ display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; color:var(--muted); }
+  .da-h b{ display:block; font-size:14px; color:var(--texto); margin-top:2px; }
+  .da-set{ margin-bottom:14px; }
+  .da-sn{ display:block; font-size:10.5px; font-weight:800; letter-spacing:.03em; margin-bottom:6px; }
+  .da-i{ display:flex; align-items:center; gap:10px; padding:7px 4px; border-bottom:1px solid var(--linha); font-size:12.5px; }
+  .da-i:last-child{ border-bottom:0; }
+  .da-a{ flex:1; color:var(--texto); font-weight:600; }
+  .da-a i{ font-style:normal; font-size:9px; font-weight:800; text-transform:uppercase; color:#2f6fb5;
+    background:rgba(47,111,181,.11); padding:1px 5px; border-radius:4px; margin-left:6px; }
+  .da-s{ font-size:11.5px; font-weight:600; min-width:96px; }
+  .da-t{ font-size:11.5px; color:var(--muted); min-width:64px; text-align:right; }
+  .da-n{ font-family:ui-monospace,monospace; font-size:10.5px; color:var(--muted); min-width:78px; text-align:right; }
+
+
+  /* ===================== LEAD TIME / HORA EXTRA ===================== */
+  .lt-box{ border:1px solid #c9e3d2; background:#f4faf6; border-radius:12px;
+    padding:13px 15px; margin-bottom:14px; }
+  .lt-box.atr{ border-color:#f0c9c5; background:#fdf1ef; }
+  .lt-top{ display:flex; align-items:center; gap:12px; }
+  .lt-dot{ width:12px; height:12px; border-radius:999px; background:#2f8f46; flex:0 0 12px; }
+  .lt-box.atr .lt-dot{ background:#c0392b; animation:ltpisca 1s steps(1,end) infinite; }
+  @keyframes ltpisca{ 50%{ opacity:.12; } }
+  .lt-l{ flex:1; min-width:0; }
+  .lt-l b{ display:block; font-size:13.5px; color:#1f7a3d; }
+  .lt-box.atr .lt-l b{ color:#b3261e; }
+  .lt-l span{ display:block; font-size:12px; color:var(--muted); margin-top:2px; }
+  .lt-cr{ text-align:right; flex:0 0 auto; }
+  .lt-cr span{ display:block; font-family:ui-monospace,monospace; font-size:23px; font-weight:700;
+    color:#2f8f46; line-height:1.05; font-variant-numeric:tabular-nums; }
+  .lt-box.atr .lt-cr span{ color:#c0392b; }
+  .lt-box.parado .lt-cr span{ opacity:.5; }
+  .lt-cr em{ font-style:normal; font-size:9.5px; font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); }
+  .lt-bar{ height:6px; background:rgba(0,0,0,.08); border-radius:999px; overflow:hidden; margin-top:10px; }
+  .lt-bar i{ display:block; height:100%; background:#2f8f46; border-radius:999px; }
+  .lt-box.atr .lt-bar i{ background:#c0392b; }
+  .lt-mini{ display:inline-flex; align-items:center; gap:6px; font-family:ui-monospace,monospace;
+    font-size:11.5px; font-weight:700; color:#1f7a3d; white-space:nowrap; }
+  .lt-mini.atr{ color:#c0392b; }
+  .lt-mini .lt-dot{ width:8px; height:8px; flex:0 0 8px; }
+  .lt-mini.atr .lt-dot{ background:#c0392b; animation:ltpisca 1s steps(1,end) infinite; }
+  .lt-mini.parado{ opacity:.72; }
+
+  .he-box{ display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    border:1px solid #ecdda9; background:#fdf7e6; border-radius:12px; padding:12px 15px; margin-bottom:14px; }
+  .he-box.on{ border-color:#e2b8b2; background:#fdf1ef; }
+  .he-h{ display:flex; align-items:center; gap:12px; flex:1 1 220px; min-width:0; }
+  .he-h svg{ width:21px; height:21px; color:#8a6100; flex:0 0 21px; }
+  .he-box.on .he-h svg{ color:#b3261e; }
+  .he-l b{ display:block; font-size:13.5px; color:#8a6100; }
+  .he-box.on .he-l b{ color:#b3261e; }
+  .he-l span{ display:block; font-size:12px; color:var(--muted); margin-top:2px; }
+  .he-btn{ font:inherit; font-size:13.5px; font-weight:700; padding:11px 19px; border:0;
+    border-radius:10px; color:#fff; cursor:pointer; background:#8a6100; }
+  .he-btn.fim{ background:#b3261e; }
+  .he-btn:hover{ filter:brightness(1.09); }
+  .he-res{ display:flex; flex-wrap:wrap; align-items:center; gap:11px; font-size:12px;
+    color:var(--muted); border:1px solid var(--linha); border-radius:10px;
+    padding:10px 13px; margin-bottom:12px; }
+  .he-res b{ font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#8a6100; }
+  .he-res i{ font-style:normal; color:#b3261e; font-weight:700; }
+  .he-res em{ font-style:normal; margin-left:auto; font-weight:700; color:var(--texto); }
+
+  /* --- cadastro de lead time --- */
+  .lt-abas{ display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--linha); }
+  .lta{ font:inherit; font-size:13.5px; font-weight:600; color:var(--muted); background:transparent;
+    border:0; border-bottom:2px solid transparent; padding:9px 4px; margin-right:14px; cursor:pointer; }
+  .lta.on{ color:var(--vermelho); border-bottom-color:var(--vermelho); font-weight:700; }
+  .ltc-l{ display:flex; flex-direction:column; gap:6px; }
+  .ltc-i{ display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px;
+    border:1px solid var(--linha); background:var(--surface); }
+  .ltc-i.on{ border-color:#c9e3d2; background:#f8fcf9; }
+  .ltc-n{ flex:1; min-width:0; }
+  .ltc-n b{ display:block; font-size:13.5px; font-weight:600; color:var(--texto); }
+  .ltc-n span{ display:block; font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .ltc-in{ display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+  .ltc-in input{ font:inherit; font-size:14px; font-weight:700; width:82px; text-align:right;
+    padding:8px 10px; border:1px solid var(--linha); border-radius:8px; color:var(--texto);
+    background:var(--surface); font-variant-numeric:tabular-nums; }
+  .ltc-in input:focus{ outline:2px solid var(--vermelho); outline-offset:-1px; border-color:transparent; }
+  .ltc-in span{ font-size:12px; font-weight:700; color:var(--muted); width:12px; }
+  .lt-tag{ display:inline-block; font-size:11px; font-weight:700; color:#1f7a3d;
+    background:#e8f6ec; border:1px solid #c3e4ce; padding:3px 9px; border-radius:999px; }
+  .lt-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+  .ltk{ background:var(--surface); border:1px solid var(--linha); border-radius:12px; padding:14px 17px; }
+  .ltk.cli{ cursor:pointer; transition:border-color .12s; }
+  .ltk.cli:hover{ border-color:var(--vermelho); }
+  .ltk.on{ border-color:var(--vermelho); box-shadow:0 1px 6px rgba(40,40,50,.08); }
+  .ltk b{ display:block; font-family:'Poppins',sans-serif; font-size:26px; font-weight:700; line-height:1.05; }
+  .ltk span{ display:block; font-size:9.5px; font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); margin-top:5px; }
+  .lt-des{ font-family:ui-monospace,monospace; font-weight:700; font-variant-numeric:tabular-nums; }
+  .lt-des.pos{ color:#c0392b; }
+  .lt-des.neg{ color:#1f7a3d; }
+
+  /* ===== Ordens de Produção ===== */
+  .col-ordem{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .col-ordem span{ font-size:11px; color:var(--muted); background:#f4f3ef; padding:3px 8px; border-radius:5px; }
+  .col-ordem b{ color:var(--vermelho); font-family:ui-monospace,monospace; margin-right:3px; }
+  .col-txt{ width:100%; min-height:120px; font-family:ui-monospace,monospace; font-size:12px;
+    padding:11px 13px; border:1px solid var(--linha); border-radius:9px; resize:vertical; color:var(--texto); }
+  .col-txt:focus{ outline:2px solid var(--vermelho); outline-offset:1px; border-color:transparent; }
+  .col-prev{ margin-top:14px; }
+  .cp-r{ font-size:13px; color:var(--muted); margin-bottom:9px; }
+  .cp-r b{ color:var(--texto); }
+  .cp-w{ display:inline-block; font-size:11px; color:#8a5a13; background:#fdf1dc; padding:2px 8px; border-radius:5px; margin-left:6px; }
+  .cp-t{ width:100%; border-collapse:collapse; font-size:11.5px; }
+  .cp-t th{ text-align:left; font-size:9.5px; font-weight:700; text-transform:uppercase; color:var(--muted);
+    padding:5px 7px; background:#faf9f5; border-bottom:1px solid var(--linha); white-space:nowrap; }
+  .cp-t td{ padding:5px 7px; border-bottom:1px solid var(--linha); color:var(--texto);
+    max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cp-m{ text-align:center; color:var(--muted); font-style:italic; }
+  .pl-dica{ display:flex; align-items:center; gap:10px; background:rgba(47,111,181,.06);
+    border:1px solid rgba(47,111,181,.2); border-radius:10px; padding:11px 15px; margin-bottom:14px; font-size:13px; color:var(--texto); }
+  .pl-dica svg{ width:19px; height:19px; color:#2f6fb5; flex:0 0 19px; }
+              .set-pill{ display:inline-block; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:5px; }
+  .chk-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
+  .chk-b{ display:flex; align-items:flex-start; gap:8px; padding:8px 10px; border:1px solid var(--linha);
+    border-radius:8px; cursor:pointer; font-size:13px; background:#fff; }
+  .chk-b:hover{ border-color:#c9c9c0; }
+  .chk-b input{ width:16px; height:16px; accent-color:var(--vermelho); margin-top:1px; flex:0 0 16px; }
+  .ca-set{ font-style:normal; font-size:10px; font-weight:800; margin-left:5px; }
+  .op-num{ font-family:ui-monospace,monospace; font-size:12.5px; font-weight:700; color:var(--vermelho); white-space:nowrap; }
+  .op-tempo{ font-weight:700; }
+  .op-fora{ color:#8a5a13 !important; font-weight:600; }
+  .tipo-grid{ display:grid; gap:10px; }
+  .tipo-c{ display:flex; align-items:center; gap:14px; text-align:left; font:inherit; padding:15px 17px;
+    border:1px solid var(--linha); border-radius:11px; background:#fff; cursor:pointer; transition:border-color .15s,background .15s; }
+  .tipo-c:hover{ border-color:var(--vermelho); background:rgba(152,36,36,.03); }
+  .tc-i{ width:44px; height:44px; border-radius:11px; display:grid; place-items:center; flex:0 0 44px; }
+  .tc-i svg{ width:22px; height:22px; }
+  .tipo-c b{ display:block; font-size:15px; color:var(--texto); }
+  .tipo-c > span:last-child{ display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .tipo-c b + span{ display:block; }
+  .emit-painel{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--muted); }
+  .emit-painel span{ background:#f4f3ef; padding:3px 9px; border-radius:6px; }
+        .dias-sem{ display:flex; gap:6px; flex-wrap:wrap; }
+  .dia-b{ font-size:12.5px; font-weight:600; padding:7px 13px; border:1px solid var(--linha); border-radius:8px;
+    cursor:pointer; color:var(--muted); background:#fff; }
+  .dia-b.on{ border-color:var(--vermelho); background:rgba(152,36,36,.08); color:var(--vermelho); }
+  .dia-b input{ display:none; }
+
+  /* apontamento */
+  .bip-box{ text-align:center; background:var(--surface); border:1px solid var(--linha); border-radius:14px; padding:36px 24px 30px; }
+  .bip-ic{ width:64px; height:64px; margin:0 auto 14px; border-radius:16px; background:rgba(152,36,36,.08);
+    color:var(--vermelho); display:grid; place-items:center; }
+  .bip-ic svg{ width:32px; height:32px; }
+  .bip-box h2{ font-family:'Poppins',sans-serif; font-size:20px; font-weight:600; color:var(--texto); }
+  .bip-box p{ font-size:13.5px; color:var(--muted); margin:6px 0 18px; }
+  .bip-in{ font-family:ui-monospace,monospace; font-size:22px; font-weight:700; text-align:center; letter-spacing:.1em;
+    padding:14px 18px; border:2px solid var(--linha); border-radius:11px; width:min(340px,100%); color:var(--texto); }
+  .bip-in:focus{ outline:0; border-color:var(--vermelho); background:#fffdf8; }
+  .and-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+  .and-c{ text-align:left; font:inherit; background:#fff; border:1px solid var(--linha); border-left:3px solid #d4930d;
+    border-radius:10px; padding:13px 15px; cursor:pointer; transition:box-shadow .15s; }
+  .and-c:hover{ box-shadow:0 6px 18px rgba(75,75,85,.12); }
+  .ac-t{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .ac-a{ font-size:14px; font-weight:700; color:var(--texto); margin-top:6px; }
+  .ac-f{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+  .ac-tm{ font-size:17px; font-weight:700; color:#d4930d; margin-top:8px; }
+  .ap-card{ background:var(--surface); border:1px solid var(--linha); border-radius:14px; padding:22px; max-width:660px; margin:0 auto; }
+  .ap-h{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding-bottom:16px; border-bottom:2px solid; }
+  .ap-lbl{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .ap-num{ font-family:ui-monospace,monospace; font-size:28px; font-weight:700; color:var(--texto); letter-spacing:.02em; }
+  .ap-st{ display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; padding:7px 14px; border-radius:999px; white-space:nowrap; }
+  .ap-info{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; padding:18px 0; }
+  .ai span{ display:block; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+  .ai b{ display:block; font-size:14px; color:var(--texto); margin-top:3px; }
+  .ai.wide{ grid-column:1/-1; }
+  .ap-fora{ display:flex; align-items:center; gap:10px; background:#fdf1dc; border:1px solid #eed9b0;
+    border-radius:9px; padding:11px 14px; font-size:13px; color:#8a5a13; margin-bottom:16px; }
+  .ap-fora svg{ width:20px; height:20px; flex:0 0 20px; }
+  .ap-sec{ margin-bottom:16px; }
+  .ap-l{ display:block; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+  .func-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .func-b{ font:inherit; font-size:14px; font-weight:600; padding:10px 18px; border:1px solid var(--linha);
+    border-radius:9px; background:#fff; color:var(--texto); cursor:pointer; }
+  .func-b:hover{ border-color:#c9c9c0; }
+  .func-b{ display:flex; align-items:center; gap:10px; }
+  .func-b.on{ border-color:var(--vermelho); background:var(--vermelho); color:#fff; }
+  .fb-ck{ width:17px; height:17px; border-radius:5px; border:2px solid #c2c2b8; flex:0 0 17px; }
+  .func-b.on .fb-ck{ background:#fff; border-color:#fff; position:relative; }
+  .func-b.on .fb-ck::after{ content:""; position:absolute; left:4.5px; top:1px; width:5px; height:9px;
+    border:solid var(--vermelho); border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
+  .ap-btn{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%; font:inherit;
+    font-size:17px; font-weight:700; padding:16px; border:0; border-radius:11px; color:#fff; cursor:pointer; }
+  .ap-btn svg{ width:20px; height:20px; }
+  .ap-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .ap-ini{ background:#2f8f46; } .ap-ini:not(:disabled):hover{ background:#27793b; }
+  .ap-fim{ background:var(--vermelho); } .ap-fim:hover{ background:var(--vermelho-2); }
+  .ap-pau{ background:#7a6ea8; } .ap-pau:hover{ background:#665a94; }
+  .ap-ret{ background:#2f8f46; } .ap-ret:hover{ background:#27793b; }
+  .ap-duplo{ display:grid; grid-template-columns:1fr 1.6fr; gap:10px; }
+  .ap-and.pausado{ background:#f2f0f7; border-color:#ddd6ea; }
+  .ap-and.pausado .aa-l span{ color:#5f5586; }
+  .ap-and.pausado .aa-t{ color:#5f5586 !important; }
+  .ap-pausado{ display:flex; align-items:center; gap:13px; background:#f2f0f7; border:1px solid #ddd6ea;
+    border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+  .ap-pausado svg{ width:26px; height:26px; color:#7a6ea8; flex:0 0 26px; }
+  .ap-pausado b{ display:block; font-size:15px; color:#4a4170; }
+  .ap-pausado span{ display:block; font-size:12.5px; color:#6f6796; margin-top:2px; }
+  .ap-pausas{ background:#faf9f5; border:1px solid var(--linha); border-radius:10px; padding:11px 14px; margin-bottom:14px; }
+  .app-l{ display:flex; align-items:center; gap:10px; font-size:12.5px; padding:4px 0; }
+  .app-n{ width:18px; height:18px; border-radius:50%; background:#7a6ea8; color:#fff; font-size:10px;
+    font-weight:700; display:grid; place-items:center; flex:0 0 18px; }
+  .app-h{ color:var(--texto); font-family:ui-monospace,monospace; font-size:11.5px; }
+  .app-t{ font-weight:700; color:#7a6ea8; }
+  .app-m{ color:var(--muted); font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .app-tot{ font-size:12px; color:var(--muted); margin-top:7px; padding-top:7px; border-top:1px solid var(--linha); }
+  .app-tot b{ color:#7a6ea8; font-size:13px; }
+  .ap-dica{ text-align:center; font-size:12px; color:var(--muted); margin-top:11px; }
+  .ap-and{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; background:#fdf9f0;
+    border:1px solid #eee0c4; border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  .aa-l span{ display:block; font-size:10px; font-weight:700; text-transform:uppercase; color:#8a5a13; }
+  .aa-l b{ display:block; font-size:14px; color:var(--texto); margin-top:3px; }
+  .aa-t{ font-size:19px !important; color:#8a5a13 !important; }
+  .ap-fim-res{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; background:#e9f2ea;
+    border:1px solid #cbe0ce; border-radius:10px; padding:16px 18px; }
+  .af-l span{ display:block; font-size:10px; font-weight:700; text-transform:uppercase; color:#2f6b39; }
+  .af-l b{ display:block; font-size:15px; color:var(--texto); margin-top:2px; }
+  .af-l i{ display:block; font-style:normal; font-size:11.5px; color:#5c7a62; }
+  .af-seta{ font-size:20px; color:#5a9169; }
+  .af-t{ margin-left:auto; text-align:right; }
+  .af-t span{ display:block; font-size:10px; font-weight:700; text-transform:uppercase; color:#2f6b39; }
+  .af-t b{ display:block; font-size:24px; font-weight:700; color:#2f6b39; }
+
+  /* OP impressa — paisagem */
+  .opz-wrap{ width:min(1100px,100%); display:flex; flex-direction:column; gap:14px; }
+  .opz{ background:#fff; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:9mm 10mm; color:#2c2c33;
+    font-family:'Archivo',Arial,sans-serif; font-size:11px; }
+  .opz-top{ display:flex; align-items:stretch; gap:14px; }
+  .opz-logo{ height:44px; align-self:center; margin-right:6px; }
+  .opz-cx{ flex:1; background:#f2eeed; border-left:4px solid #9E1B1B; padding:10px 16px; }
+  .opz-t{ font-size:18px; font-weight:700; color:#2c2c33; }
+  .opz-t b{ color:#9E1B1B; }
+  .opz-sub{ display:flex; gap:44px; margin-top:5px; font-size:10.5px; color:#5c5c65; }
+  .opz-sub b{ color:#2c2c33; font-weight:700; }
+  .opz-corpo{ display:flex; gap:20px; align-items:flex-start; border-top:1.5px solid #2c2c33;
+    border-bottom:1px solid #b9b9c0; padding:10px 0 12px; margin-top:10px; }
+  .opz-esq{ flex:1; display:grid; grid-template-columns:repeat(2,1fr); gap:3px 22px; }
+  .ol{ display:flex; align-items:baseline; gap:7px; }
+  .ol.wide{ grid-column:1/-1; }
+  .ol span{ font-weight:700; color:#2c2c33; white-space:nowrap; }
+  .ol b{ font-weight:400; color:#3a3a42; }
+  .ol b.grande{ font-size:15px; font-weight:700; color:#9E1B1B; }
+  .ol b.lin{ font-family:ui-monospace,monospace; letter-spacing:-.02em; }
+  .opz-dir{ flex:0 0 300px; text-align:center; }
+  .opz-bc svg{ width:100%; height:64px; }
+  .opz-bc span{ display:block; font-family:ui-monospace,monospace; font-size:11px; letter-spacing:.14em; color:#2c2c33; }
+  .opz-tbl{ width:100%; border-collapse:collapse; font-size:10px; margin-top:10px; }
+  .opz-tbl th{ text-align:left; background:#eceae6; border-top:1px solid #2c2c33; border-bottom:1px solid #2c2c33;
+    padding:5px 7px; font-size:9.5px; font-weight:700; color:#2c2c33; }
+  .opz-tbl td{ padding:4px 7px; border-bottom:1px solid #dcdcd4; color:#3a3a42; }
+  .opz-tbl td.mono{ font-family:ui-monospace,monospace; font-weight:700; }
+  .opz-tbl td.ctr{ text-align:center; }
+  .opz-tbl td.vazio{ color:#9a9aa2; }
+  .opz-op{ margin-top:12px; border:1px solid #b9b9c0; }
+  .opz-oph{ display:grid; grid-template-columns:1fr 1fr 260px; background:#eceae6;
+    border-bottom:1px solid #2c2c33; font-size:9.5px; font-weight:700; }
+  .opz-oph span{ padding:4px 8px; border-right:1px solid #cfcfc7; }
+  .opz-opr{ display:grid; grid-template-columns:1fr 1fr 260px; border-bottom:1px solid #dcdcd4; align-items:center; }
+  .opz-opr:last-child{ border-bottom:0; }
+  .or-c{ padding:7px 8px; border-right:1px solid #ecece6; font-size:10px; line-height:1.5; }
+  .or-c b{ font-family:ui-monospace,monospace; color:#9E1B1B; }
+  .or-f{ font-family:ui-monospace,monospace; color:#5c5c65; letter-spacing:-.02em; }
+  .or-b{ padding:5px 8px; text-align:center; }
+  .or-b svg{ width:100%; max-width:230px; height:44px; }
+  .or-b span{ display:block; font-family:ui-monospace,monospace; font-size:9px; letter-spacing:.16em; color:#2c2c33; }
+  .opz-rod{ display:flex; gap:20px; margin-top:12px; align-items:flex-end; }
+  .orz-obs{ flex:1; }
+  .orz-obs span{ font-size:9px; font-weight:700; text-transform:uppercase; color:#77777f; }
+  .orz-l{ border:1px solid #cfcfc7; border-radius:3px; min-height:34px; padding:6px 9px; margin-top:3px; font-size:10px; }
+  .orz-ass{ display:grid; grid-template-columns:repeat(3,150px); gap:16px; }
+  .orz-ass div{ text-align:center; font-size:9px; color:#77777f; }
+  .orz-ass span{ display:block; border-top:1px solid #55555e; margin-bottom:4px; }
+  .opz-pe{ display:flex; justify-content:space-between; margin-top:10px; padding-top:6px;
+    border-top:2px solid #9E1B1B; font-size:8.5px; color:#8a8a92; }
+  @media print{
+    .opz{ box-shadow:none; padding:6mm 7mm; page-break-after:always; break-after:page; }
+    .opz:last-child{ page-break-after:auto; break-after:auto; }
+    .opz-wrap{ gap:0; width:100%; }
+    .opz-cx,.opz-tbl th,.opz-oph{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+  /* impressão em lote */
+  .imp-layout{ display:grid; grid-template-columns:330px 1fr; gap:18px; align-items:start; }
+  @media(max-width:900px){ .imp-layout{ grid-template-columns:1fr; } }
+  .imp-lado{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; padding:16px; }
+  .il-tabs{ display:flex; gap:4px; background:#f1f0ea; border-radius:9px; padding:3px; margin-bottom:11px; }
+  .il-t{ flex:1; font:inherit; font-size:13px; font-weight:600; padding:7px; border:0; border-radius:7px;
+    background:transparent; color:var(--muted); cursor:pointer; }
+  .il-t.on{ background:#fff; color:var(--vermelho); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .il-filtro .search{ width:100%; }
+  .il-res{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0 10px; }
+  .ilr-n{ text-align:center; background:#faf9f5; border:1px solid var(--linha); border-radius:9px; padding:9px 4px; }
+  .ilr-n b{ display:block; font-family:'Poppins',sans-serif; font-size:20px; font-weight:700; color:var(--texto); }
+  .ilr-n span{ display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; color:var(--muted); }
+  .il-acoes{ display:flex; gap:14px; justify-content:flex-end; margin-bottom:8px; }
+  .il-grupos{ display:flex; flex-direction:column; gap:6px; max-height:44vh; overflow-y:auto; }
+  .il-g{ display:flex; align-items:center; gap:10px; text-align:left; font:inherit; background:#fff;
+    border:1px solid var(--linha); border-radius:9px; padding:10px 12px; cursor:pointer; transition:border-color .12s; }
+  .il-g:hover{ border-color:#c9c9c0; }
+  .il-g.on{ border-color:var(--vermelho); background:rgba(152,36,36,.05); }
+  .ilg-ck{ width:19px; height:19px; flex:0 0 19px; border:1.5px solid #c2c2b8; border-radius:5px;
+    display:grid; place-items:center; }
+  .il-g.on .ilg-ck{ background:var(--vermelho); border-color:var(--vermelho); color:#fff; }
+  .ilg-ck svg{ width:12px; height:12px; }
+  .ilg-ck i{ width:9px; height:2.5px; background:var(--vermelho); border-radius:2px; }
+  .il-g.on .ilg-ck i{ background:#fff; }
+  .ilg-t{ flex:1; min-width:0; }
+  .ilg-t b{ display:block; font-size:13.5px; color:var(--texto); }
+  .ilg-t i{ font-style:normal; font-size:10.5px; font-weight:800; }
+  .ilg-n{ font-size:11.5px; font-weight:700; color:var(--muted); white-space:nowrap; }
+  .il-btn{ width:100%; margin-top:14px; padding:12px; }
+  .imp-prev{ background:var(--surface); border:1px solid var(--linha); border-radius:13px; min-height:400px; }
+  .ip-h{ font-size:12.5px; font-weight:600; color:var(--muted); padding:13px 17px; border-bottom:1px solid var(--linha); }
+  .ip-lista{ padding:12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:9px; }
+  .ip-c{ position:relative; border:1px solid var(--linha); border-radius:9px; padding:11px 13px; background:#fcfcfa; }
+  .ip-n{ display:flex; align-items:center; gap:7px; }
+  .ip-a{ font-size:13.5px; font-weight:700; color:var(--texto); margin-top:5px; }
+  .ip-d{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .ip-x{ position:absolute; top:6px; right:6px; }
+  .ip-vazio{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    height:400px; text-align:center; padding:20px; }
+  .ip-vazio svg{ width:44px; height:44px; color:#c6c6bd; }
+  .ip-vazio b{ font-size:15px; color:var(--texto); }
+  .ip-vazio span{ font-size:13px; color:var(--muted); max-width:280px; }
+  .lote-box{ margin-top:14px; }
+  .lb-h{ display:flex; align-items:baseline; gap:10px; margin-bottom:9px; }
+  .lb-h b{ font-size:14px; color:var(--texto); }
+  .lb-h span{ font-size:12px; color:var(--muted); }
+  .tbl-lote th{ font-size:10px; padding:7px 8px; }
+  .tbl-lote td{ padding:6px 8px; font-size:12.5px; }
+
+  
+</style>
+</head>
+<body>
+
+  <section class="screen screen--login active" id="login">
+    <div class="tm">
+      <div class="tm-faixa">
+        <span class="tmf-t">Terminal de Produção</span>
+        <span class="tmf-b">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </div>
+
+      <div class="tm-corpo">
+        <div class="tm-marca">
+          <img src="https://i.postimg.cc/ZKKbdCCF/image-removebg-preview-(18).png" alt="Raldi" onerror="this.style.display='none'">
+          <div class="tm-nome">raldi</div>
+        </div>
+
+        <h1 class="tm-h">Ordens de Produção</h1>
+        <p class="tm-p">Identifique-se para apontar as atividades do chão de fábrica.</p>
+
+        <form id="loginForm" class="tm-form" onsubmit="fazerLogin(); return false;">
+          <div class="tm-f">
+            <label for="lgEmail">E-mail</label>
+            <input id="lgEmail" name="username" type="email" autocomplete="username"
+              placeholder="seu@email.com" required autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="tm-f">
+            <label for="lgSenha">Senha</label>
+            <div class="tm-senha">
+              <input id="lgSenha" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+              <button type="button" class="tm-eye" onclick="verSenha()" title="Mostrar senha">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="tm-err" id="lgErr"></div>
+          <button class="tm-btn" id="lgBtn" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            Entrar no terminal</button>
+        </form>
+
+        <div class="lg-diag" id="lgDiag"></div>
+      </div>
+
+      <div class="tm-pe">
+        <span>Raldi Móveis com Precisão</span>
+        <span class="tm-sep"></span>
+        <span id="tmRelogio">--:--</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen screen--app" id="app">
+    <div class="shell">
+      <header class="top">
+        <div class="top-brand">
+          <img src="https://i.postimg.cc/ZKKbdCCF/image-removebg-preview-(18).png" alt="Raldi" onerror="this.style.display='none'">
+          <div class="tb-t"><b>raldi</b><span>Produção</span></div>
+        </div>
+        <nav class="top-nav" id="nav"></nav>
+        <div class="top-dir">
+          <span class="td-user" id="tuMail"></span>
+          <button class="td-b" onclick="sairSistema()" title="Sair">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          </button>
+        </div>
+      </header>
+      <main class="corpo" id="view"></main>
+    </div>
+  </section>
+
+  <div class="rx-ov" id="modalOv"></div>
+  <div class="ficha-overlay" id="fichaOverlay"></div>
+  <div class="sync-off" id="syncOff">Sem conexão — as alterações serão enviadas ao reconectar</div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  /* ===== Firebase — MESMO banco do sistema principal ===== */
+  firebase.initializeApp({
+    apiKey: "AIzaSyAvvGRa0w5k0mOAmac0IFriGHj0Z1M2gLk",
+    authDomain: "raldi-sistemav1.firebaseapp.com",
+    databaseURL: "https://raldi-sistemav1-default-rtdb.firebaseio.com",
+    projectId: "raldi-sistemav1",
+    storageBucket: "raldi-sistemav1.firebasestorage.app",
+    messagingSenderId: "983595967299",
+    appId: "1:983595967299:web:381a4effa3289a7ff385f6"
+  });
+  const auth=firebase.auth(), db=firebase.database();
+  const persistenciaPronta=auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(e=>console.warn(e.message));
+  let CONTADORES={}, TELA=null;
+  const view=document.getElementById('view');
+  const I={ pcp:'<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h6"/>',
+    prod:'<path d="M3 21 V11 L9 15 V11 L15 15 V6 H21 V21 Z"/><path d="M7 21 v-3 M12 21 v-3 M17 21 v-3"/>',
+    rh:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20 a5.5 5.5 0 0 1 11 0"/><path d="M15 4.8 a3.2 3.2 0 0 1 0 6.4"/><path d="M16.4 20 a5.5 5.5 0 0 0 4 -2.2"/>',
+    est:'<path d="M12 3 L20 7 V17 L12 21 L4 17 V7 Z"/><path d="M4 7 L12 11 L20 7 M12 11 V21"/>',
+    com:'<circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4 h2 l2.2 11 h9.6 l1.8 -7 H6.6"/>' };
+  function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
+    clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),2400); }
+
+  const C128=['11011001100','11001101100','11001100110','10010011000','10010001100','10001001100','10011001000','10011000100','10001100100','11001001000','11001000100','11000100100','10110011100','10011011100','10011001110','10111001100','10011101100','10011100110','11001110010','11001011100','11001001110','11011100100','11001110100','11101101110','11101001100','11100101100','11100100110','11101100100','11100110100','11100110010','11011011000','11011000110','11000110110','10100011000','10001011000','10001000110','10110001000','10001101000','10001100010','11010001000','11000101000','11000100010','10110111000','10110001110','10001101110','10111011000','10111000110','10001110110','11101110110','11010001110','11000101110','11011101000','11011100010','11011101110','11101011000','11101000110','11100010110','11101101000','11101100010','11100011010','11101111010','11001000010','11110001010','10100110000','10100001100','10010110000','10010000110','10000101100','10000100110','10110010000','10110000100','10011010000','10011000010','10000110100','10000110010','11000010010','11001010000','11110111010','11000010100','10001111010','10100111100','10010111100','10010011110','10111100100','10011110100','10011110010','11110100100','11110010100','11110010010','11011011110','11011110110','11110110110','10101111000','10100011110','10001011110','10111101000','10111100010','11110101000','11110100010','10111011110','10111101110','11101011110','11110101110','11010000100','11010010000','11010011100','1100011101011'];
+  const EMPRESA={ end1:'Rua Miguel Luiz Goulart, 116', end2:'São João Margem Esquerda,', end3:'Tubarão - SC, 88708-500' };
+  const EDIT_SVG='<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  const TRASH_SVG='<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+  const FICHA_SVG='<svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h4"/></svg>';
+  const X_SVG='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  function code128B(txt){
+    let bits=C128[104]; let sum=104; // Start B
+    for(let i=0;i<txt.length;i++){
+      const v=txt.charCodeAt(i)-32;
+      if(v<0||v>94) continue;
+      bits+=C128[v]; sum+=v*(i+1);
+    }
+    bits+=C128[sum%103]; bits+=C128[106];
+    return bits;
+  }
+  function barrasSVG(txt,largura,altura){
+    const bits=code128B(txt), n=bits.length;
+    const w=largura/n;
+    let x=0, rects='';
+    for(let i=0;i<n;i++){
+      if(bits[i]==='1') rects+=`<rect x="${(x).toFixed(3)}" y="0" width="${w.toFixed(3)}" height="${altura}" fill="#000"/>`;
+      x+=w;
+    }
+    return `<svg viewBox="0 0 ${largura} ${altura}" width="100%" height="${altura}" preserveAspectRatio="none" shape-rendering="crispEdges">${rects}</svg>`;
+  }
+  function escHtml(s){ return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtData(d){ if(!d) return '—'; const p=String(d).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; }
+  function fmtDataHora(iso){
+    if(!iso) return '—';
+    const d=new Date(iso); if(isNaN(d)) return '—';
+    return d.toLocaleDateString('pt-BR')+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  function usuarioAtual(){ return (auth.currentUser && auth.currentUser.email) || 'desconhecido'; }
+  function abrirModal(titulo,corpo,acoes){
+    const ov=document.getElementById('modalOv');
+    ov.innerHTML=`<div class="rx-box"><div class="rx-h"><h3>${titulo}</h3>
+      <button class="icon-btn" onclick="fecharModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="rx-b">${corpo}</div><div class="rx-f">${acoes}</div></div>`;
+    ov.classList.add('open');
+    ov.onclick=e=>{ if(e.target===ov) fecharModal(); };
+    setTimeout(()=>{ const i=ov.querySelector('input,select'); if(i) i.focus(); },40);
+  }
+  function fecharModal(){ const ov=document.getElementById('modalOv'); ov.classList.remove('open'); ov.innerHTML=''; }
+  function setPageOrientation(mode){
+    let s=document.getElementById('pageStyle');
+    if(!s){ s=document.createElement('style'); s.id='pageStyle'; document.head.appendChild(s); }
+    s.textContent='@page{ size:A4 '+mode+'; margin:8mm; }';
+  }
+  function normalizaData(v){
+    v=String(v||'').trim(); if(!v) return '';
+    let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if(m){ const a=m[3].length===2?('20'+m[3]):m[3]; return `${a}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+    m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[0];
+    return '';
+  }
+  function fecharFicha(){ const ov=document.getElementById('fichaOverlay'); ov.classList.remove('open'); ov.innerHTML=''; }
+
+/* ================= ORDENS DE PRODUÇÃO ================= */
+  const OP_SETORES={
+    APOIO:{sigla:'APOIO', nome:'Áreas de Apoio', tipo:'digital', cor:'#7a6ea8',
+      atividades:['Medição técnica','Liberado do PCP','Agrupamento do lote']},
+    SL:{sigla:'SL', nome:'Sublinha', tipo:'lote', cor:'#2f6fb5',
+      atividades:['Corte','Laminado','Usinagem']},
+    LP:{sigla:'LP', nome:'Linha Principal', tipo:'produto', cor:'#c77d1a',
+      atividades:['Montagem','Pintura']},
+    EXP:{sigla:'EXP', nome:'Expedição', tipo:'digital', cor:'#2f8f46',
+      atividades:['Expedição','Montagem externa']}
+  };
+  const ST_OP={
+    nao:{label:'Não iniciada', cor:'#c0392b'},
+    parcial:{label:'Parcial / Iniciada', cor:'#d4930d'},
+    pausada:{label:'Pausada', cor:'#7a6ea8'},
+    encerrada:{label:'Encerrada', cor:'#2f8f46'}
+  };
+  const TIPO_OP={lote:'OP de Lote', produto:'OP de Produto', digital:'Apontamento Digital'};
+  const DIAS_SEM=[['Dom',0],['Seg',1],['Ter',2],['Qua',3],['Qui',4],['Sex',5],['Sáb',6]];
+
+  let PAINEL=[], EQUIPE=[], OPS=[];
+  let painelSel=new Set(), emitOP=null, apontOP=null, buscaOps='', fOps={setor:'',status:'',tipo:'',ativ:''};
+
+  /* ---- tempo dentro da jornada ---- */
+
+  /* ===== Motor de tempo (jornada, intervalos, feriados, hora extra) ===== */
+  const JORNADA_PADRAO={ ini:'07:30', fim:'18:00', dias:[1,2,3,4,5],
+    intervalos:[{de:'09:00',ate:'09:15'},{de:'12:00',ate:'13:30'},{de:'16:00',ate:'16:15'}] };
+  // Sábado, domingo e feriado: o dia inteiro é hora extra.
+  // Segunda a sexta: tudo que fica antes da abertura e depois do fechamento da jornada.
+  // Sem recorte de horário — trabalho de madrugada e virada de dia contam.
+  const HE_JANELA={ ini:'00:00', fim:'24:00' };
+  let FERIADOS={};                                 // {'2026-12-25':{data,nome}}
+
+  function jhm(s){ const [h,m]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(m||0); }
+  function jmin(d){ return d.getHours()*60+d.getMinutes()+d.getSeconds()/60; }
+  function jdia(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function jover(a1,a2,b1,b2){ return Math.max(0, Math.min(a2,b2)-Math.max(a1,b1)); }
+  function ehFeriado(d){ return !!FERIADOS[jdia(d)]; }
+  // aceita jornadas antigas (intIni/intFim) e novas (intervalos[])
+  function intervalosDe(j){
+    if(j && j.semIntervalo) return [];                       // jornada sem parada declarada
+    if(j && Array.isArray(j.intervalos) && j.intervalos.length) return j.intervalos;
+    if(j && j.intervalos && typeof j.intervalos==='object') return Object.values(j.intervalos);
+    if(j && j.intIni && j.intFim) return [{de:j.intIni,ate:j.intFim}];
+    return JORNADA_PADRAO.intervalos;
+  }
+  function diasDe(j){ return (j && j.dias && j.dias.length)?j.dias:JORNADA_PADRAO.dias; }
+  function ehDiaUtil(d,j){ return diasDe(j).includes(d.getDay()) && !ehFeriado(d); }
+
+  // percorre dia a dia entre duas datas e soma minutos de cada janela
+  function percorre(iniISO,fimISO,j,fn){
+    const ini=new Date(iniISO), fim=new Date(fimISO);
+    if(!(fim>ini)) return 0;
+    let total=0,g=0;
+    const cur=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
+    const ult=new Date(fim.getFullYear(),fim.getMonth(),fim.getDate());
+    while(cur<=ult && g++<400){
+      const mi=jdia(cur)===jdia(ini), mf=jdia(cur)===jdia(fim);
+      const a=mi?jmin(ini):0, b=mf?jmin(fim):1440;
+      total+=fn(cur,a,b);
+      cur.setDate(cur.getDate()+1);
+    }
+    return total;
+  }
+  // arredonda só quando o chamador não pediu o valor exato (cronômetro do lead time)
+  function _rd(exato,v){ return exato?v:Math.round(v); }
+  // minutos DENTRO da jornada (dia útil, fora dos intervalos)
+  function tempoTrabalhado(iniISO,fimISO,j,exato){
+    j=j||JORNADA_PADRAO;
+    const jI=jhm(j.ini||JORNADA_PADRAO.ini), jF=jhm(j.fim||JORNADA_PADRAO.fim);
+    const ints=intervalosDe(j);
+    return _rd(exato,percorre(iniISO,fimISO,j,(dia,a,b)=>{
+      if(!ehDiaUtil(dia,j)) return 0;
+      let t=jover(a,b,jI,jF);
+      ints.forEach(iv=>{ t-=jover(Math.max(a,jI),Math.min(b,jF),jhm(iv.de),jhm(iv.ate)); });
+      return Math.max(0,t);
+    }));
+  }
+  // minutos FORA da jornada, dentro da janela de hora extra
+  function tempoHoraExtra(iniISO,fimISO,j,exato){
+    j=j||JORNADA_PADRAO;
+    const jI=jhm(j.ini||JORNADA_PADRAO.ini), jF=jhm(j.fim||JORNADA_PADRAO.fim);
+    const hI=jhm(HE_JANELA.ini), hF=jhm(HE_JANELA.fim);
+    return _rd(exato,percorre(iniISO,fimISO,j,(dia,a,b)=>{
+      const janela=jover(a,b,hI,hF);
+      if(!janela) return 0;
+      if(!ehDiaUtil(dia,j)) return janela;              // sábado, domingo ou feriado: tudo é extra
+      return Math.max(0, janela - jover(a,b,jI,jF));    // antes de abrir e depois de fechar
+    }));
+  }
+  /* Fora da jornada = antes de abrir, depois de fechar, ou dia não trabalhado.
+     Diferente de dentroExpediente(): o intervalo de almoço NÃO é hora extra. */
+  function foraJornada(dt,j){
+    j=j||JORNADA_PADRAO;
+    if(!ehDiaUtil(dt,j)) return true;
+    const m=jmin(dt);
+    return m<jhm(j.ini||JORNADA_PADRAO.ini) || m>=jhm(j.fim||JORNADA_PADRAO.fim);
+  }
+  function dentroExpediente(dt,j){
+    j=j||JORNADA_PADRAO;
+    if(!ehDiaUtil(dt,j)) return false;
+    const m=jmin(dt);
+    if(m<jhm(j.ini||JORNADA_PADRAO.ini)||m>jhm(j.fim||JORNADA_PADRAO.fim)) return false;
+    return !intervalosDe(j).some(iv=>m>jhm(iv.de)&&m<jhm(iv.ate));
+  }
+  function motivoFora(dt,j){
+    j=j||JORNADA_PADRAO;
+    if(ehFeriado(dt)) return 'feriado ('+(FERIADOS[jdia(dt)].nome||'')+')';
+    if(!diasDe(j).includes(dt.getDay())) return dt.getDay()===0?'domingo':'sábado';
+    const m=jmin(dt);
+    if(m<jhm(j.ini||JORNADA_PADRAO.ini)) return 'antes do expediente';
+    if(m>jhm(j.fim||JORNADA_PADRAO.fim)) return 'depois do expediente';
+    const iv=intervalosDe(j).find(x=>m>jhm(x.de)&&m<jhm(x.ate));
+    return iv?('intervalo '+iv.de+'–'+iv.ate):'fora do expediente';
+  }
+  function fmtMin(m){
+    if(!m||m<=0) return '0min';
+    const h=Math.floor(m/60), r=Math.round(m%60);
+    return (h?h+'h':'')+(r?(h?' ':'')+r+'min':(h?'':'0min'));
+  }
+  function fmtJornada(j){
+    j=j||JORNADA_PADRAO;
+    const ints=intervalosDe(j);
+    return (j.ini||JORNADA_PADRAO.ini)+'–'+(j.fim||JORNADA_PADRAO.fim)+
+      ' · int. '+(ints.length?ints.map(i=>i.de+'–'+i.ate).join(', '):'sem intervalo');
+  }
+
+
+  /* ===== Funcionários da OP (um ou vários) ===== */
+  function funcsDe(o,fase){
+    const f=o&&o[fase];
+    if(!f) return [];
+    if(Array.isArray(f.funcs)&&f.funcs.length) return f.funcs;
+    if(f.funcs&&typeof f.funcs==='object'){ const v=Object.values(f.funcs); if(v.length) return v; }
+    return f.func?[f.func]:[];
+  }
+  function nomesFuncs(o,fase){ const l=funcsDe(o,fase); return l.length?l.join(', '):''; }
+  function funcResumo(o,fase){
+    const l=funcsDe(o,fase);
+    if(!l.length) return '';
+    return l.length===1?l[0]:(l[0]+' +'+(l.length-1));
+  }
+  function equipeOP(o){
+    const s=new Set([...funcsDe(o,'inicio'),...funcsDe(o,'fim')]);
+    return [...s];
+  }
+
+  /* ===== Feriados ===== */
+  function listaFeriados(){ return Object.values(FERIADOS).sort((a,b)=>String(a.data).localeCompare(String(b.data))); }
+  function addFeriado(data,nome){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(data)){ toast('Data inválida'); return Promise.reject(); }
+    return db.ref('feriados/'+data).set({data,nome:(nome||'').trim()||'Feriado',
+      criadoEm:new Date().toISOString(),criadoPor:usuarioAtual()});
+  }
+  function delFeriado(data){ return db.ref('feriados/'+data).remove(); }
+
+
+  /* ===== Tempo da OP: normal + hora extra + pausas ===== */
+  // hora extra só conta quando a OP foi explicitamente marcada como extra
+  function tempoNormalOP(o,ate,exato){
+    if(!o||!o.inicio||!o.inicio.em) return 0;
+    const f=ate||(o.fim&&o.fim.em)||new Date().toISOString();
+    const bruto=tempoTrabalhado(o.inicio.em,f,o.jornada,true);
+    const pausado=pausasDe(o).reduce((a,p)=>a+((p&&p.de)?tempoTrabalhado(p.de,p.ate||f,o.jornada,true):0),0);
+    return _rd(exato,Math.max(0,bruto-pausado));
+  }
+  /* ===== Hora extra por SESSÃO =============================================
+     extras: [{de:ISO, ate:ISO|null, por, funcs}]
+     O operador declara a hora extra pelos botões "Iniciar / Finalizar hora
+     extra" na tela de apontamento. Só o tempo dentro de uma sessão declarada
+     (e fora da jornada) conta como extra; pausas abertas nesse intervalo são
+     descontadas. OPs antigas, marcadas apenas com o.extra=true, continuam
+     valendo pelo caminho de compatibilidade no fim da função.               */
+  function extrasDe(o){ const e=o&&o.extras; return e?(Array.isArray(e)?e:Object.values(e)):[]; }
+  function extraAberta(o){ return extrasDe(o).find(e=>e&&e.de&&!e.ate)||null; }
+  function tempoExtraOP(o,ate,exato){
+    if(!o||!o.inicio||!o.inicio.em) return 0;
+    const f=ate||(o.fim&&o.fim.em)||new Date().toISOString();
+    const ss=extrasDe(o);
+    if(ss.length){
+      let t=0;
+      ss.forEach(s=>{
+        if(!s||!s.de) return;
+        const sf=s.ate||f;
+        if(!(sf>s.de)) return;
+        let b=tempoHoraExtra(s.de,sf,o.jornada,true);
+        pausasDe(o).forEach(p=>{
+          if(!p||!p.de) return;
+          const pa=p.ate||f;
+          const pi=(p.de>s.de)?p.de:s.de, pf=(pa<sf)?pa:sf;
+          if(pf>pi) b-=tempoHoraExtra(pi,pf,o.jornada,true);
+        });
+        t+=Math.max(0,b);
+      });
+      return _rd(exato,t);
+    }
+    if(!o.extra) return 0;
+    const bruto=tempoHoraExtra(o.inicio.em,f,o.jornada,true);
+    const pausado=pausasDe(o).reduce((a,p)=>a+((p&&p.de)?tempoHoraExtra(p.de,p.ate||f,o.jornada,true):0),0);
+    return _rd(exato,Math.max(0,bruto-pausado));
+  }
+  function tempoTotalOP(o,ate,exato){
+    const t=tempoNormalOP(o,ate,true)+tempoExtraOP(o,ate,true);
+    return _rd(exato,t);
+  }
+
+
+  /* ===================== LEAD TIME =========================================
+     Banco: leadtimes/{projeto}/{atividade} = {projeto,atividade,setor,horas,por,em}
+     Cadastro OPCIONAL e por projeto — só as atividades que precisam de prazo.
+     O cronômetro anda sobre o tempo TRABALHADO da OP (tempoTotalOP), então ele
+     pausa junto com a OP e congela fora do expediente, sem código extra.     */
+  let LEADS={};
+  function ltSlug(s){
+    return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'_';
+  }
+  function leadHoras(projeto,atividade){
+    const p=LEADS[ltSlug(projeto)]; if(!p) return null;
+    const r=p[ltSlug(atividade)];
+    const h=r?Number(r.horas):NaN;
+    return (isFinite(h)&&h>0)?h:null;
+  }
+  // OP de lote vale para vários projetos: usa o maior prazo cadastrado entre eles
+  function leadMinOP(o){
+    if(!o||!o.atividade) return null;
+    const projs=(o.tipo==='lote'&&(o.projetosLote||[]).length)
+      ? (o.projetosLote||[]).map(r=>r&&r.projeto) : [o.projeto];
+    let h=null;
+    projs.filter(Boolean).forEach(p=>{ const v=leadHoras(p,o.atividade); if(v!=null) h=(h==null?v:Math.max(h,v)); });
+    if(h!=null) return Math.round(h*60);
+    // OP encerrada guarda o prazo que valia na época — o histórico não é reescrito
+    const g=Number(o.leadMin);
+    return (o.status==='encerrada'&&isFinite(g)&&g>0)?g:null;
+  }
+  function leadStatus(o){
+    const lm=leadMinOP(o); if(lm==null||lm<=0) return null;
+    const st=stOp(o);
+    const ate=(st==='encerrada'&&o.fim&&o.fim.em)?o.fim.em:new Date().toISOString();
+    const gasto=(st==='nao')?0:tempoTotalOP(o,ate,true);
+    const restSeg=Math.round((lm-gasto)*60);
+    return {leadMin:lm, gastoMin:gasto, restSeg, atrasado:restSeg<0,
+      pct:Math.max(0,Math.min(100,Math.round(gasto/lm*100))), st, rodando:st==='parcial'};
+  }
+  function fmtCron(seg){
+    const n=Math.abs(Math.round(seg));
+    const h=Math.floor(n/3600), m=Math.floor((n%3600)/60), s=n%60;
+    return (seg<0?'-':'')+h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  // atualiza só os nós do cronômetro — nunca re-renderiza a tela a cada segundo
+  function tickLead(){
+    const els=document.querySelectorAll('[data-lt-op]');
+    for(let i=0;i<els.length;i++){
+      const el=els[i];
+      const o=OPS.find(x=>x.id===el.getAttribute('data-lt-op')); if(!o) continue;
+      const L=leadStatus(o); if(!L) continue;
+      el.textContent=fmtCron(L.restSeg);
+      const box=el.closest('.lt-box')||el.closest('.lt-mini');
+      if(box){ box.classList.toggle('atr',L.atrasado); box.classList.toggle('parado',!L.rodando); }
+      const bar=box&&box.querySelector('.lt-bar i');
+      if(bar){ bar.style.width=L.pct+'%'; }
+    }
+  }
+  setInterval(tickLead,1000);
+
+  function stOp(o){ return (o&&ST_OP[o.status])?o.status:'nao'; }
+
+  /* ===== Pausa da OP (compartilhado) ===== */
+  // pausas: [{de:ISO, ate:ISO|null, func, por}]
+  function pausasDe(o){ const p=o&&o.pausas; return p?(Array.isArray(p)?p:Object.values(p)):[]; }
+  function pausaAberta(o){ return pausasDe(o).find(p=>p&&p.de&&!p.ate)||null; }
+  function minutosPausados(o,ateISO){
+    const fim=ateISO||new Date().toISOString();
+    return pausasDe(o).reduce((a,p)=>{
+      if(!p||!p.de) return a;
+      const f=p.ate||fim;
+      return a+tempoTrabalhado(p.de,f,o.jornada);
+    },0);
+  }
+  // tempo líquido = tempo na jornada menos o que ficou pausado
+  function tempoLiquido(o,ateISO){ return tempoTotalOP(o,ateISO); }
+  function pausarOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    if(stOp(o)!=='parcial'){ toast('Só é possível pausar uma OP em andamento'); return; }
+    if(pausaAberta(o)){ toast('Esta OP já está pausada'); return; }
+    const motivo=prompt('Motivo da pausa (opcional):','');
+    if(motivo===null) return;
+    const agora=new Date().toISOString(), quem=usuarioAtual();
+    const lista=pausasDe(o).slice();
+    lista.push({de:agora,ate:null,motivo:(motivo||'').trim(),func:(o.inicio&&o.inicio.func)||'',por:quem});
+    db.ref('ops/'+id).update({status:'pausada',pausas:lista})
+      .then(()=>{ toast('OP pausada — o tempo parou'); })
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function retomarOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    const ab=pausaAberta(o);
+    if(!ab){ toast('Esta OP não está pausada'); return; }
+    const agora=new Date().toISOString();
+    const lista=pausasDe(o).map(p=>(p===ab||(p.de===ab.de&&!p.ate))?{...p,ate:agora}:p);
+    db.ref('ops/'+id).update({status:'parcial',pausas:lista})
+      .then(()=>{ toast('OP retomada'); })
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function totalPausas(o){ return pausasDe(o).length; }
+
+
+  /* ---- Hora extra: sessões declaradas pelo operador ---- */
+  function iniciarExtra(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    if(stOp(o)==='nao'){ toast('Inicie a OP antes de apontar hora extra'); return; }
+    if(stOp(o)==='encerrada'){ toast('Esta OP já está encerrada'); return; }
+    if(extraAberta(o)){ toast('Já existe hora extra em andamento'); return; }
+    const agora=new Date();
+    if(!foraJornada(agora,o.jornada) &&
+       !confirm('Agora está DENTRO da jornada ('+fmtJornada(o.jornada)+').\n\nIniciar hora extra mesmo assim?')) return;
+    const l=extrasDe(o).slice();
+    l.push({de:agora.toISOString(),ate:null,por:usuarioAtual(),funcs:funcsDe(o,'inicio')});
+    db.ref('ops/'+id).update({extras:l, extra:true, foraExpediente:true})
+      .then(()=>toast('Hora extra iniciada às '+agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})))
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function finalizarExtra(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    const ab=extraAberta(o); if(!ab){ toast('Não há hora extra em andamento'); return; }
+    const agoraISO=new Date().toISOString();
+    const l=extrasDe(o).map(s=>(s.de===ab.de&&!s.ate)?Object.assign({},s,{ate:agoraISO}):s);
+    const min=tempoExtraOP({...o,extras:l},agoraISO);
+    db.ref('ops/'+id).update({extras:l, tempoExtraMin:min})
+      .then(()=>toast('Hora extra finalizada — '+fmtMin(min)+' no total'))
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function htmlExtraResumo(o){
+    const l=extrasDe(o); if(!l.length) return '';
+    return `<div class="he-res"><b>Hora extra</b>
+      ${l.map((s,i)=>`<span>${i+1}. ${fmtHora(s.de)} → ${s.ate?fmtHora(s.ate):'<i>em curso</i>'}</span>`).join('')}
+      <em>Total ${fmtMin(tempoExtraOP(o))}</em></div>`;
+  }
+  function htmlExtra(o){
+    const st=stOp(o);
+    if(st==='nao'||st==='encerrada') return htmlExtraResumo(o);
+    const ab=extraAberta(o), agora=new Date(), fora=foraJornada(agora,o.jornada);
+    if(!ab && !fora) return htmlExtraResumo(o);
+    const min=tempoExtraOP(o);
+    return `${htmlExtraResumo(o)}
+      <div class="he-box ${ab?'on':''}">
+        <div class="he-h">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <div class="he-l"><b>${ab?'Hora extra em andamento':'Fora da jornada'}</b>
+            <span>${ab
+              ? ('Desde '+fmtHora(ab.de)+(min?' · '+fmtMin(min)+' acumulados':''))
+              : (motivoFora(agora,o.jornada)+' · agora '+agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}))}</span></div>
+        </div>
+        ${ab?`<button class="he-btn fim" onclick="finalizarExtra('${o.id}')">Finalizar hora extra</button>`
+            :`<button class="he-btn ini" onclick="iniciarExtra('${o.id}')">Iniciar hora extra</button>`}
+      </div>`;
+  }
+
+  // selo compacto do lead time para listas
+  function htmlLeadMini(o){
+    const L=leadStatus(o); if(!L) return '';
+    return `<span class="lt-mini ${L.atrasado?'atr':''} ${L.rodando?'':'parado'}">`
+      +`<i class="lt-dot"></i><span data-lt-op="${o.id}">${fmtCron(L.restSeg)}</span></span>`;
+  }
+  function htmlLead(o){
+    const L=leadStatus(o); if(!L) return '';
+    return `<div class="lt-box ${L.atrasado?'atr':''} ${L.rodando?'':'parado'}">
+      <div class="lt-top">
+        <span class="lt-dot"></span>
+        <div class="lt-l"><b>${L.atrasado?'Lead time estourado':'Dentro do lead time'}</b>
+          <span>Prazo ${fmtMin(L.leadMin)} · realizado ${fmtMin(Math.round(L.gastoMin))}${L.st==='pausada'?' · OP pausada, cronômetro parado':''}</span></div>
+        <div class="lt-cr"><span data-lt-op="${o.id}">${fmtCron(L.restSeg)}</span>
+          <em>${L.atrasado?'de atraso':'restante'}</em></div>
+      </div>
+      <div class="lt-bar"><i style="width:${L.pct}%"></i></div>
+    </div>`;
+  }
+
+  function opSetorDe(sig){ return OP_SETORES[sig]||OP_SETORES.SL; }
+
+  /* ================= 1. PAINEL DE CONTROLE ================= */
+  const P_COLS=[
+    {k:'lote',t:'Lote',w:'84px',ph:'0000'},{k:'projeto',t:'Projeto',w:'86px',ph:'00000'},
+    {k:'cliente',t:'Cliente',w:'',ph:'Nome do cliente'},{k:'telefone',t:'Telefone',w:'126px',ph:'(00) 00000-0000'},
+    {k:'local',t:'Local',w:'120px',ph:'Cidade'},{k:'ambiente',t:'Descrição do ambiente',w:'',ph:'Ex.: Cozinha'},
+    {k:'consultor',t:'Consultor(a)',w:'112px',ph:'Nome'},{k:'dataEntrada',t:'Entrada programada',w:'132px',tipo:'date'}
+  ];
+  function linhaPainelVazia(){ const o={id:'pl'+Date.now()+Math.floor(Math.random()*900+100)}; P_COLS.forEach(c=>o[c.k]=''); o.ordem=Date.now(); return o; }
+
+  /* ===== Status de emissão de OP por linha do Painel =====================
+     vermelho : nenhuma OP emitida
+     amarelo  : emitido em parte (inclui o caso "só Áreas de Apoio")
+     verde    : todas as atividades já têm OP emitida
+     Sublinha (SL) é OP de lote: vale para todos os projetos do mesmo lote. */
+  function indiceEmissao(){
+    const porProj=new Map(), porLote=new Map();
+    OPS.forEach(o=>{
+      const a=String(o.atividade||'').trim(); if(!a) return;
+      const p=String(o.projeto||'').trim(), l=String(o.lote||'').trim();
+      if(p){ if(!porProj.has(p)) porProj.set(p,new Map()); if(!porProj.get(p).has(a)) porProj.get(p).set(a,o); }
+      if(l){ if(!porLote.has(l)) porLote.set(l,new Map()); if(!porLote.get(l).has(a)) porLote.get(l).set(a,o); }
+    });
+    return {porProj,porLote};
+  }
+  function emissaoDe(reg,idx){
+    idx=idx||indiceEmissao();
+    const ativs=todasAtividades(), total=ativs.length;
+    const p=String((reg&&reg.projeto)||'').trim(), l=String((reg&&reg.lote)||'').trim();
+    const mp=idx.porProj.get(p)||new Map(), ml=idx.porLote.get(l)||new Map();
+    let feitas=0, foraApoio=0, apoioTot=0, apoioFeitas=0;
+    const det=ativs.map(a=>{
+      const op = a.porLote ? (l?ml.get(a.atividade):null) : (p?mp.get(a.atividade):null);
+      if(a.setor==='APOIO'){ apoioTot++; if(op) apoioFeitas++; }
+      else if(op) foraApoio++;
+      if(op) feitas++;
+      return {setor:a.setor, atividade:a.atividade, porLote:a.porLote, op:op||null};
+    });
+    let nivel,label;
+    if(!p && !l){ nivel='vazio'; label='sem projeto'; }
+    else if(!feitas){ nivel='nao'; label='Não emitido'; }
+    else if(feitas>=total){ nivel='ok'; label='Emitido'; }
+    else if(!foraApoio){ nivel='apoio'; label=(apoioFeitas>=apoioTot?'Só apoio':'Apoio parcial'); }
+    else { nivel='parcial'; label='Parcial'; }
+    return {feitas,total,nivel,label,det,projeto:p,lote:l};
+  }
+  const PL_COR={nao:'#b3261e', apoio:'#d3a41c', parcial:'#d3a41c', ok:'#2f8f46', vazio:'#c8c6bd'};
+  const PL_PESO={nao:0, parcial:1, apoio:1, ok:2, vazio:3};
+  function badgeEmissao(e,rid){
+    if(e.nivel==='vazio')
+      return '<span class="pl-badge pl-b-vazio" title="Informe o projeto ou o lote">'+e.label+'</span>';
+    const falta=e.det.filter(a=>!a.op).map(a=>a.atividade);
+    const tip=falta.length?('Falta emitir: '+falta.join(', ')):'Todas as OPs já emitidas';
+    return '<button class="pl-badge pl-b-'+e.nivel+'" title="'+escHtml(tip)+'" onclick="painelDetalheEmissao(\''+rid+'\')">'
+      +'<i></i>'+e.label+'<em>'+e.feitas+'/'+e.total+'</em></button>';
+  }
+  function painelDetalheEmissao(id){
+    const r=PAINEL.find(x=>x.id===id); if(!r) return;
+    const e=emissaoDe(r);
+    const porSetor={};
+    e.det.forEach(a=>{ (porSetor[a.setor]=porSetor[a.setor]||[]).push(a); });
+    const corpo='<div class="ple-l">'+Object.keys(porSetor).map(sig=>{
+      const S=opSetorDe(sig);
+      return '<div class="ple-s" style="color:'+S.cor+'">'+sig+' &middot; '+escHtml(S.nome)
+        +(S.tipo==='lote'?' <span class="ple-tag">por lote</span>':'')+'</div>'
+        +porSetor[sig].map(a=>'<div class="ple-i '+(a.op?'on':'off')+'">'
+            +'<span class="mk">'+(a.op?'&#10003;':'')+'</span><b>'+escHtml(a.atividade)+'</b>'
+            +(a.op?'<u>OP '+escHtml(a.op.numero||'')+'</u>':'<s>não emitida</s>')+'</div>').join('');
+    }).join('')+'</div>';
+    abrirModal('Emissão de OP &middot; projeto '+escHtml(e.projeto||'—')+(e.lote?' &middot; lote '+escHtml(e.lote):''),
+      '<p class="page-sub" style="margin:-4px 0 12px">'+e.feitas+' de '+e.total+' atividades com OP emitida.</p>'+corpo,
+      '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>'
+      +'<button class="btn btn-primary" onclick="fecharModal();irAba(\'ops\')">Ver Ordens de Produção</button>');
+  }
+  function painelIrStatus(nivel){
+    const idx=indiceEmissao();
+    const i=PAINEL.findIndex(r=>{ const e=emissaoDe(r,idx);
+      return nivel==='amarelo' ? (e.nivel==='apoio'||e.nivel==='parcial') : e.nivel===nivel; });
+    if(i<0){ toast('Nenhuma linha nesse status'); return; }
+    const el=document.querySelector('.pl-in[data-r="'+i+'"][data-c="0"]');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); }
+  }
+
+  function renderPainel(){
+    TELA='painel';
+    const IDX=indiceEmissao();
+    const EST=PAINEL.map(r=>emissaoDe(r,IDX));
+    const cNao=EST.filter(e=>e.nivel==='nao').length;
+    const cAmr=EST.filter(e=>e.nivel==='apoio'||e.nivel==='parcial').length;
+    const cOk =EST.filter(e=>e.nivel==='ok').length;
+    const cVaz=EST.filter(e=>e.nivel==='vazio').length;
+    const comProj=Math.max(1,cNao+cAmr+cOk);
+    const nProj=[...new Set(PAINEL.map(r=>String(r.projeto||'').trim()).filter(Boolean))].length;
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head">
+        <div><h1 class="page-title">Painel de Controle</h1>
+          <p class="page-sub">${PAINEL.length} linha(s) · ${nProj} projeto(s) · cole direto do Excel</p></div>
+        <div style="display:flex;gap:10px">
+          <span id="plSelBar">${painelSel.size?`<button class="btn btn-ghost" onclick="painelExcluirSel()">Excluir ${painelSel.size} linha(s)</button>`:''}</span>
+          <button class="btn btn-ghost" onclick="abrirFeriados()">Feriados</button>
+          <button class="btn btn-ghost" onclick="painelAdd(1)">+ Linha</button>
+          <button class="btn btn-ghost" onclick="painelAdd(5)">+ 5 linhas</button>
+          <button class="btn btn-primary" onclick="abrirColar()">Colar do Excel</button>
+        </div>
+      </div>
+      <div class="pl-dica">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        <span>Copie as linhas no Excel e clique em <b>Colar do Excel</b> — ou clique numa célula da tabela e use <b>Ctrl+V</b>. As linhas são criadas automaticamente.</span>
+      </div>
+      ${PAINEL.length?`<div class="pl-status">
+        <button class="pls" onclick="painelIrStatus('nao')" title="Nenhuma OP emitida">
+          <i style="background:${PL_COR.nao}"></i><b>${cNao}</b><span>Não emitido</span></button>
+        <button class="pls" onclick="painelIrStatus('amarelo')" title="Emitido em parte">
+          <i style="background:${PL_COR.apoio}"></i><b>${cAmr}</b><span>Parcial</span></button>
+        <button class="pls" onclick="painelIrStatus('ok')" title="Todas as OPs emitidas">
+          <i style="background:${PL_COR.ok}"></i><b>${cOk}</b><span>Completo</span></button>
+        ${cVaz?`<button class="pls" onclick="painelIrStatus('vazio')" title="Linha sem projeto e sem lote">
+          <i style="background:${PL_COR.vazio}"></i><b>${cVaz}</b><span>Sem projeto</span></button>`:''}
+        <div class="pls-bar"><div class="t">
+          <u style="width:${cOk/comProj*100}%;background:${PL_COR.ok}"></u>
+          <u style="width:${cAmr/comProj*100}%;background:${PL_COR.apoio}"></u>
+          <u style="width:${cNao/comProj*100}%;background:${PL_COR.nao}"></u>
+        </div><em>${Math.round(cOk/comProj*100)}% com OP completa</em></div>
+      </div>
+      <div class="pl-resumo">
+        ${[...new Set(PAINEL.map(r=>String(r.lote||'').trim()))].filter(Boolean).map(l=>{
+          const rows=PAINEL.map((r,i)=>[r,EST[i]]).filter(([r])=>String(r.lote||'').trim()===l);
+          const pior=rows.reduce((a,[,e])=>PL_PESO[e.nivel]<PL_PESO[a]?e.nivel:a,'vazio');
+          return `<button class="plr-b" onclick="painelIrLote('${l}')" title="${rows.length} linha(s) neste lote">
+            <i style="background:${PL_COR[pior]}"></i>Lote <b>${escHtml(l)}</b><span>${rows.length}</span></button>`;
+        }).join('')}
+      </div>`:''}
+      <div class="table-wrap pl-wrap">
+        <table class="tbl tbl-painel" id="tblPainel">
+          <thead><tr><th class="pl-ck" style="width:34px"><input type="checkbox" class="ck" onchange="painelMarcarTodos(this.checked)"></th>
+            <th class="pl-n" style="width:36px">#</th>
+            ${P_COLS.map(c=>`<th class="pl-th-${c.k}"${c.w?` style="width:${c.w}"`:''}>${c.t}</th>`).join('')}
+            <th class="pl-th-emissao" style="width:158px">Emissão de OP</th>
+            <th style="width:40px"></th></tr></thead>
+          <tbody id="painelBody">${linhasPainel(EST)}</tbody>
+        </table>
+      </div>
+      ${!PAINEL.length?`<div class="empty" style="margin-top:16px"><div class="e-ic"><svg viewBox="0 0 24 24">${I.pcp}</svg></div>
+        <h3>Painel vazio</h3><p>Adicione linhas ou cole os dados direto da sua planilha.</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-ghost" onclick="painelAdd(5)">+ 5 linhas</button>
+          <button class="btn btn-primary" onclick="abrirColar()">Colar do Excel</button></div></div>`:''}
+    </div>`;
+    ligarPaste();
+  }
+  function linhasPainel(EST){
+    let grupo=-1, ultLote=null, ultCli=null;
+    if(!EST){ const ix=indiceEmissao(); EST=PAINEL.map(r=>emissaoDe(r,ix)); }
+    return PAINEL.map((r,i)=>{
+      const lote=String(r.lote||'').trim();
+      const novoLote = lote!==ultLote;
+      if(novoLote){ grupo++; ultCli=null; }
+      const cli=String(r.cliente||'').trim();
+      const repeteCli = !novoLote && cli && cli===ultCli;
+      ultLote=lote; ultCli=cli;
+      const par = grupo%2===1;
+      return `<tr class="pl-r${par?' pl-par':''}${novoLote&&i>0?' pl-novo':''}${painelSel.has(r.id)?' row-sel':''}" data-id="${r.id}">
+        <td class="pl-ck"><input type="checkbox" class="ck" ${painelSel.has(r.id)?'checked':''} onchange="painelMarcar('${r.id}',this.checked)"></td>
+        <td class="pl-n">${i+1}</td>
+        ${P_COLS.map((c,ci)=>{
+          const v=String(r[c.k]||'');
+          let cls='pl-in pl-'+c.k;
+          if(c.k==='cliente'&&repeteCli) cls+=' pl-rep';
+          if(!v) cls+=' pl-vaz';
+          return `<td class="pl-td pl-td-${c.k}">${c.k==='lote'&&!novoLote
+            ? `<input class="${cls} pl-lote-rep" data-r="${i}" data-c="${ci}" value="${v.replace(/"/g,'&quot;')}"
+                 onchange="painelSet('${r.id}','${c.k}',this.value)" onkeydown="painelTecla(event,${i},${ci})">`
+            : `<input class="${cls}" data-r="${i}" data-c="${ci}" type="${c.tipo||'text'}"
+                 value="${v.replace(/"/g,'&quot;')}" placeholder="${c.ph||''}"
+                 onchange="painelSet('${r.id}','${c.k}',this.value)" onkeydown="painelTecla(event,${i},${ci})">`}</td>`;
+        }).join('')}
+        <td class="pl-td pl-td-emissao">${badgeEmissao(EST[i],r.id)}</td>
+        <td class="acoes pl-ac"><button class="icon-btn danger" title="Excluir" onclick="painelExcluir('${r.id}')">${TRASH_SVG}</button></td>
+      </tr>`;
+    }).join('');
+  }
+  function painelIrLote(l){
+    const i=PAINEL.findIndex(r=>String(r.lote||'').trim()===l);
+    if(i<0) return;
+    const el=document.querySelector(`.pl-in[data-r="${i}"][data-c="0"]`);
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); }
+  }
+  function painelAdd(n){
+    const novas=[]; for(let i=0;i<n;i++){ const l=linhaPainelVazia(); l.ordem=Date.now()+i; novas.push(l); }
+    const upd={}; novas.forEach(l=>upd['painel/'+l.id]=l);
+    db.ref().update(upd).catch(e=>toast('Erro: '+e.message));
+  }
+  function painelSet(id,campo,val){
+    db.ref('painel/'+id+'/'+campo).set(val).catch(e=>toast('Erro: '+e.message));
+    const r=PAINEL.find(x=>x.id===id); if(r) r[campo]=val;
+    if(campo==='lote' && r){
+      const proj=String(r.projeto||'').trim(), l=String(val||'').trim();
+      if(proj && l) vincularLotePorProjeto(proj,l)
+        .then(n=>{ if(n) toast(n+' OP(s) do projeto '+proj+' vinculadas ao lote '+l); })
+        .catch(e=>toast('Erro ao vincular lote: '+e.message));
+    }
+  }
+  function painelExcluir(id){
+    const r=PAINEL.find(x=>x.id===id);
+    if(!confirm(`Excluir a linha do lote ${r&&r.lote?r.lote:'(sem lote)'}?`)) return;
+    db.ref('painel/'+id).remove().catch(e=>toast('Erro: '+e.message));
+    painelSel.delete(id);
+  }
+  function painelMarcar(id,on){ on?painelSel.add(id):painelSel.delete(id); renderPainel(); }
+  function painelMarcarTodos(on){ PAINEL.forEach(r=>on?painelSel.add(r.id):painelSel.delete(r.id)); renderPainel(); }
+  function painelExcluirSel(){
+    if(!confirm(`Excluir ${painelSel.size} linha(s) selecionada(s)?`)) return;
+    const upd={}; painelSel.forEach(id=>upd['painel/'+id]=null);
+    db.ref().update(upd).then(()=>{ painelSel.clear(); toast('Linhas excluídas'); }).catch(e=>toast('Erro: '+e.message));
+  }
+  function painelTecla(ev,r,c){
+    const mover=(dr,dc)=>{
+      const alvo=document.querySelector(`.pl-in[data-r="${r+dr}"][data-c="${c+dc}"]`);
+      if(alvo){ ev.preventDefault(); alvo.focus(); alvo.select&&alvo.select(); }
+    };
+    if(ev.key==='ArrowDown'||ev.key==='Enter') mover(1,0);
+    else if(ev.key==='ArrowUp') mover(-1,0);
+    else if(ev.key==='Tab'&&!ev.shiftKey&&c===P_COLS.length-1) mover(1,-(P_COLS.length-1));
+  }
+  /* colar do Excel */
+  let pasteLigado=false;
+  function ligarPaste(){
+    if(pasteLigado) return; pasteLigado=true;
+    document.addEventListener('paste',ev=>{
+      if(TELA!=='painel') return;
+      const alvo=ev.target;
+      if(alvo && (alvo.id==='colTxt' || alvo.tagName==='TEXTAREA')) return; // modal de colagem
+      const txt=(ev.clipboardData||window.clipboardData||{}).getData?
+        (ev.clipboardData||window.clipboardData).getData('text'):'';
+      if(!txt) return;
+      const multi = txt.indexOf('\t')>=0 || txt.trim().indexOf('\n')>=0;
+      if(!multi) return; // colagem de 1 célula: comportamento normal do input
+      ev.preventDefault();
+      const cel=alvo&&alvo.closest?alvo.closest('.pl-in'):null;
+      if(cel) colarPainel(txt, parseInt(cel.dataset.r,10), parseInt(cel.dataset.c,10));
+      else colarPainel(txt, PAINEL.length, 0); // sem célula focada: acrescenta no final
+    });
+  }
+  function colarPainel(txt,r0,c0){
+    const linhas=txt.replace(/\r/g,'').split('\n').filter((l,i,a)=>l.length||i<a.length-1);
+    if(!linhas.length) return;
+    const grade=linhas.map(l=>l.split('\t'));
+    const upd={}; const novas=[];
+    grade.forEach((cols,li)=>{
+      const idx=r0+li;
+      let alvo=PAINEL[idx];
+      if(!alvo){ alvo=linhaPainelVazia(); alvo.id='pl'+(Date.now()+idx)+Math.floor(Math.random()*900+100);
+        alvo.ordem=Date.now()+idx; novas.push(alvo); }
+      const dados={...alvo};
+      cols.forEach((v,ci)=>{
+        const col=P_COLS[c0+ci]; if(!col) return;
+        let val=String(v).trim();
+        if(col.tipo==='date') val=normalizaData(val);
+        dados[col.k]=val;
+      });
+      upd['painel/'+dados.id]=dados;
+    });
+    db.ref().update(upd)
+      .then(()=>toast(`${grade.length} linha(s) coladas`))
+      .catch(e=>toast('Erro ao colar: '+e.message));
+  }
+
+
+  /* ---- colagem do Excel por modal (não depende de foco em célula) ---- */
+  function abrirColar(){
+    abrirModal('Colar do Excel',
+      `<p style="font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+        Selecione as linhas no Excel, copie (<b>Ctrl+C</b>), clique na caixa abaixo e cole (<b>Ctrl+V</b>).
+        Não precisa incluir o cabeçalho.</p>
+      <div class="col-ordem">Ordem esperada das colunas:
+        ${P_COLS.map((c,i)=>`<span><b>${String.fromCharCode(65+i)}</b> ${c.t}</span>`).join('')}</div>
+      <textarea id="colTxt" class="col-txt" placeholder="Cole aqui..." oninput="previewColar()"></textarea>
+      <label class="chk" style="margin-top:12px"><input type="checkbox" id="colSubst">
+        <span>Substituir todas as linhas atuais <i>(sem marcar, as linhas são adicionadas ao final)</i></span></label>
+      <div id="colPrev"></div>`,
+      `<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+       <button class="btn btn-primary" id="btnColar" disabled style="opacity:.5" onclick="confirmarColar()">Colar</button>`);
+    setTimeout(()=>{const t=document.getElementById('colTxt'); if(t) t.focus();},60);
+  }
+  function parseGrade(txt){
+    return String(txt||'').replace(/\r/g,'').split('\n')
+      .filter(l=>l.trim().length).map(l=>l.split('\t'));
+  }
+  function previewColar(){
+    const g=parseGrade(document.getElementById('colTxt').value);
+    const res=document.getElementById('colPrev'), btn=document.getElementById('btnColar');
+    if(!g.length){ res.innerHTML=''; btn.disabled=true; btn.style.opacity='.5'; btn.textContent='Colar'; return; }
+    const cols=Math.max(...g.map(r=>r.length));
+    res.innerHTML=`<div class="col-prev">
+      <div class="cp-r"><b>${g.length}</b> linha(s) · <b>${cols}</b> coluna(s) detectada(s)
+        ${cols>P_COLS.length?`<span class="cp-w">as colunas além da ${P_COLS.length}ª serão ignoradas</span>`:''}</div>
+      <table class="cp-t"><thead><tr>${P_COLS.slice(0,Math.min(cols,P_COLS.length)).map(c=>`<th>${c.t}</th>`).join('')}</tr></thead>
+        <tbody>${g.slice(0,4).map(r=>`<tr>${P_COLS.slice(0,Math.min(cols,P_COLS.length)).map((c,i)=>
+          `<td>${escHtml(String(r[i]||'').trim())||'—'}</td>`).join('')}</tr>`).join('')}
+        ${g.length>4?`<tr><td colspan="${Math.min(cols,P_COLS.length)}" class="cp-m">… e mais ${g.length-4} linha(s)</td></tr>`:''}</tbody></table>
+    </div>`;
+    btn.disabled=false; btn.style.opacity='1'; btn.textContent=`Colar ${g.length} linha(s)`;
+  }
+  function confirmarColar(){
+    const g=parseGrade(document.getElementById('colTxt').value);
+    if(!g.length) return;
+    const subst=document.getElementById('colSubst').checked;
+    const btn=document.getElementById('btnColar'); btn.disabled=true; btn.textContent='Colando...';
+    const upd={};
+    if(subst) PAINEL.forEach(r=>upd['painel/'+r.id]=null);
+    const base=Date.now();
+    g.forEach((cols,li)=>{
+      const id='pl'+(base+li)+Math.floor(Math.random()*900+100);
+      const o={id, ordem:(subst?0:(PAINEL.length))+base+li};
+      P_COLS.forEach((c,ci)=>{
+        let v=String(cols[ci]||'').trim();
+        if(c.tipo==='date') v=normalizaData(v);
+        o[c.k]=v;
+      });
+      upd['painel/'+id]=o;
+    });
+    db.ref().update(upd)
+      .then(()=>{
+        fecharModal(); toast(`${g.length} linha(s) coladas`);
+        return vincularLotes(Object.values(upd).filter(Boolean))
+          .then(n=>{ if(n) toast(n+' OP(s) sem lote vinculadas ao lote do painel'); });
+      })
+      .catch(e=>{ btn.disabled=false; btn.textContent='Colar'; alert('Erro ao colar: '+e.message); });
+  }
+
+
+  /* ===== Feriados ===== */
+  function abrirFeriados(){
+    const l=listaFeriados();
+    const hoje=new Date().toISOString().slice(0,10);
+    abrirModal('Feriados e dias não trabalhados',
+      `<p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+        Nestes dias o tempo das OPs não é contado como jornada normal. Trabalho neles só conta se
+        a OP for apontada como <b>hora extra</b>.</p>
+      <div class="fer-add">
+        <input type="date" id="ferData" value="${hoje}">
+        <input type="text" id="ferNome" placeholder="Nome do feriado" onkeydown="if(event.key==='Enter'){event.preventDefault();salvarFeriado();}">
+        <button class="btn btn-primary btn-sm" onclick="salvarFeriado()">Adicionar</button>
+      </div>
+      <div class="fer-l" id="ferLista">${htmlFeriados()}</div>`,
+      `<button class="btn btn-primary" onclick="fecharModal()">Fechar</button>`);
+  }
+  function htmlFeriados(){
+    const l=listaFeriados();
+    if(!l.length) return '<p class="aviso">Nenhum feriado cadastrado.</p>';
+    const porAno={};
+    l.forEach(f=>{ const a=String(f.data).slice(0,4); (porAno[a]=porAno[a]||[]).push(f); });
+    return Object.entries(porAno).sort().map(([ano,fs])=>`
+      <div class="fer-ano">${ano}</div>
+      ${fs.map(f=>`<div class="fer-i">
+        <span class="fer-d">${fmtData(f.data)}</span>
+        <span class="fer-n">${escHtml(f.nome)}</span>
+        <button class="icon-btn danger" onclick="removerFeriado('${f.data}')">${TRASH_SVG}</button>
+      </div>`).join('')}`).join('');
+  }
+  function salvarFeriado(){
+    const d=document.getElementById('ferData').value, n=document.getElementById('ferNome').value;
+    if(!d){ toast('Escolha a data'); return; }
+    addFeriado(d,n).then(()=>{ document.getElementById('ferNome').value='';
+      setTimeout(()=>{ const el=document.getElementById('ferLista'); if(el) el.innerHTML=htmlFeriados(); },250);
+      toast('Feriado adicionado'); }).catch(e=>{ if(e) toast('Erro: '+(e.message||e)); });
+  }
+  function removerFeriado(d){
+    if(!confirm('Remover o feriado de '+fmtData(d)+'?')) return;
+    delFeriado(d).then(()=>{ setTimeout(()=>{ const el=document.getElementById('ferLista'); if(el) el.innerHTML=htmlFeriados(); },250);
+      toast('Removido'); }).catch(e=>toast('Erro: '+e.message));
+  }
+/* ================= 2. EQUIPE PRODUTIVA ================= */
+  function renderEquipe(){
+    TELA='equipe';
+    view.innerHTML=`<div class="page">
+      <div class="page-head">
+        <div><h1 class="page-title">Equipe Produtiva</h1>
+          <p class="page-sub">${EQUIPE.length} funcionário(s) cadastrado(s)</p></div>
+        <button class="btn btn-primary" onclick="formFunc()">+ Novo funcionário</button></div>
+      ${EQUIPE.length?`<div class="table-wrap"><table class="tbl">
+        <thead><tr><th>Funcionário</th><th style="width:200px">Setores</th><th>Atividades</th><th style="width:72px"></th></tr></thead>
+        <tbody>${EQUIPE.map(f=>`<tr>
+          <td class="cel-nome">${escHtml(f.nome)}</td>
+          <td>${(f.setores||[]).map(s=>`<span class="set-pill" style="background:${opSetorDe(s).cor}22;color:${opSetorDe(s).cor}">${escHtml(s)}</span>`).join(' ')||'—'}</td>
+          <td class="cel-disc">${(f.atividades||[]).map(escHtml).join(' · ')||'—'}</td>
+          <td class="acoes">
+            <button class="icon-btn" title="Editar" onclick="formFunc('${f.id}')">${EDIT_SVG}</button>
+            <button class="icon-btn danger" title="Excluir" onclick="excluirFunc('${f.id}')">${TRASH_SVG}</button>
+          </td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24">${I.rh}</svg></div>
+        <h3>Nenhum funcionário</h3><p>Cadastre quem pode apontar cada atividade.</p>
+        <button class="btn btn-primary" onclick="formFunc()">+ Novo funcionário</button></div>`}
+    </div>`;
+  }
+  function formFunc(id){
+    const f=id?EQUIPE.find(x=>x.id===id):null;
+    const sets=f?(f.setores||[]):[], ats=f?(f.atividades||[]):[];
+    abrirModal(f?'Editar funcionário':'Novo funcionário',
+      `<div class="fld"><label>Nome<i>*</i></label><input id="fnNome" value="${f?escHtml(f.nome):''}" placeholder="Ex.: João da Silva"></div>
+       <div class="fld" style="margin-top:16px"><label>Setores em que pode trabalhar</label>
+         <div class="chk-grid">${Object.values(OP_SETORES).map(s=>`
+           <label class="chk-b"><input type="checkbox" class="fnSet" value="${s.sigla}" ${sets.includes(s.sigla)?'checked':''} onchange="atualizaAtivsFunc()">
+             <span><b style="color:${s.cor}">${s.sigla}</b> ${escHtml(s.nome)}</span></label>`).join('')}</div></div>
+       <div class="fld" style="margin-top:16px"><label>Atividades que pode executar</label>
+         <div class="chk-grid" id="fnAtivs">${htmlAtivsFunc(sets,ats)}</div></div>`,
+      `<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+       <button class="btn btn-primary" onclick="salvarFunc(${f?`'${f.id}'`:'null'})">Salvar</button>`);
+  }
+  function htmlAtivsFunc(sets,ats){
+    if(!sets.length) return '<p class="aviso" style="grid-column:1/-1;font-size:12px">Selecione ao menos um setor.</p>';
+    return sets.flatMap(s=>opSetorDe(s).atividades.map(a=>
+      `<label class="chk-b"><input type="checkbox" class="fnAt" value="${escHtml(a)}" ${ats.includes(a)?'checked':''}>
+        <span>${escHtml(a)} <i class="ca-set" style="color:${opSetorDe(s).cor}">${s}</i></span></label>`)).join('');
+  }
+  function atualizaAtivsFunc(){
+    const sets=[...document.querySelectorAll('.fnSet:checked')].map(e=>e.value);
+    const ats=[...document.querySelectorAll('.fnAt:checked')].map(e=>e.value);
+    document.getElementById('fnAtivs').innerHTML=htmlAtivsFunc(sets,ats);
+  }
+  function salvarFunc(id){
+    const nome=(document.getElementById('fnNome').value||'').trim();
+    if(!nome){ toast('Informe o nome'); return; }
+    const setores=[...document.querySelectorAll('.fnSet:checked')].map(e=>e.value);
+    const atividades=[...document.querySelectorAll('.fnAt:checked')].map(e=>e.value);
+    if(!setores.length){ toast('Selecione ao menos um setor'); return; }
+    const fid=id||('fn'+Date.now());
+    db.ref('equipe/'+fid).set({id:fid,nome,setores,atividades,
+      criadoEm:id?(EQUIPE.find(x=>x.id===id)||{}).criadoEm||new Date().toISOString():new Date().toISOString()})
+      .then(()=>{ fecharModal(); toast('Funcionário salvo'); }).catch(e=>toast('Erro: '+e.message));
+  }
+  function excluirFunc(id){
+    const f=EQUIPE.find(x=>x.id===id);
+    if(!confirm(`Excluir ${f?f.nome:'este funcionário'}?`)) return;
+    db.ref('equipe/'+id).remove().then(()=>toast('Excluído')).catch(e=>toast('Erro: '+e.message));
+  }
+  function aptosPara(atividade,setor){
+    return EQUIPE.filter(f=>(f.atividades||[]).includes(atividade)||((f.setores||[]).includes(setor)&&!(f.atividades||[]).length));
+  }
+
+  
+/* ================= 3. EMISSÃO DE OP + LISTA ================= */
+  function filtrarOps(){
+    const q=(buscaOps||'').trim().toLowerCase(), t=q?q.split(/\s+/):[];
+    return OPS.filter(o=>{
+      if(fOps.setor&&o.setor!==fOps.setor) return false;
+      if(fOps.status&&stOp(o)!==fOps.status) return false;
+      if(fOps.tipo&&o.tipo!==fOps.tipo) return false;
+      if(fOps.ativ&&o.atividade!==fOps.ativ) return false;
+      if(!t.length) return true;
+      const txt=[o.numero,o.projeto,o.lote,o.atividade,o.setor,
+        (o.projetosLote||[]).map(r=>[r.projeto,r.cliente,r.ambiente].join(' ')).join(' '),
+        o.inicio&&o.inicio.func,o.fim&&o.fim.func].filter(Boolean).join(' ').toLowerCase();
+      return t.every(x=>txt.includes(x));
+    });
+  }
+  function renderOPs(){
+    TELA='ops'; emitOP=null;
+    const lista=filtrarOps();
+    const cont={nao:0,parcial:0,encerrada:0}; OPS.forEach(o=>cont[stOp(o)]++);
+    const ativsTodas=[...new Set(Object.values(OP_SETORES).flatMap(s=>s.atividades))];
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head">
+        <div><h1 class="page-title">Ordens de Produção</h1><p class="page-sub">${OPS.length} OP(s) emitida(s)</p></div>
+        <button class="btn btn-primary" onclick="renderImprimir()">Imprimir OPs</button></div>
+      ${OPS.length?`
+      <div class="st-resumo">${Object.entries(ST_OP).map(([k,v])=>
+        `<div class="st-item"><span class="dot" style="background:${v.cor}"></span>${v.label} <b>${cont[k]}</b></div>`).join('')}</div>
+      <div class="inv-filtros">
+        <input class="search" id="buscaOpsIn" value="${buscaOps.replace(/"/g,'&quot;')}" placeholder="Buscar por OP, projeto, lote, produto ou funcionário..." oninput="buscaOps=this.value; atualizarOps()">
+        <select onchange="fOps.setor=this.value; atualizarOps()"><option value="">Todos os setores</option>
+          ${Object.values(OP_SETORES).map(s=>`<option value="${s.sigla}" ${fOps.setor===s.sigla?'selected':''}>${s.sigla} — ${escHtml(s.nome)}</option>`).join('')}</select>
+        <select onchange="fOps.ativ=this.value; atualizarOps()"><option value="">Todas as atividades</option>
+          ${ativsTodas.map(a=>`<option value="${escHtml(a)}" ${fOps.ativ===a?'selected':''}>${escHtml(a)}</option>`).join('')}</select>
+        <select onchange="fOps.status=this.value; atualizarOps()"><option value="">Todos os status</option>
+          ${Object.entries(ST_OP).map(([k,v])=>`<option value="${k}" ${fOps.status===k?'selected':''}>${v.label}</option>`).join('')}</select>
+        <select onchange="fOps.tipo=this.value; atualizarOps()"><option value="">Todos os tipos</option>
+          ${Object.entries(TIPO_OP).map(([k,v])=>`<option value="${k}" ${fOps.tipo===k?'selected':''}>${v}</option>`).join('')}</select>
+        ${(buscaOps||fOps.setor||fOps.status||fOps.tipo||fOps.ativ)?`<button class="btn btn-ghost btn-sm" onclick="buscaOps='';fOps={setor:'',status:'',tipo:'',ativ:''};renderOPs()">Limpar</button>`:''}
+      </div>
+      <div class="table-wrap table-scroll"><table class="tbl">
+        <thead><tr><th style="width:28px"></th><th style="width:118px">OP</th><th style="width:70px">Projeto</th>
+          <th style="width:64px">Lote</th><th>Cliente / Ambiente</th><th style="width:58px">Setor</th><th style="width:110px">Atividade</th>
+          <th style="width:130px">Funcionário</th><th style="width:96px">Início</th><th style="width:96px">Fim</th>
+          <th style="width:84px">Tempo</th><th style="width:120px">Status</th><th style="width:72px"></th></tr></thead>
+        <tbody id="opsBody">${linhasOps(lista)}</tbody></table></div>`
+      :`<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24">${I.prod}</svg></div>
+        <h3>Nenhuma OP emitida</h3><p>As OPs emitidas no sistema principal aparecem aqui.</p></div>`}
+    </div>`;
+  }
+  function linhasOps(lista){
+    if(!lista.length) return '<tr><td class="td-empty" colspan="13">Nenhum resultado</td></tr>';
+    return lista.map(o=>{
+      const st=stOp(o), v=ST_OP[st], S=opSetorDe(o.setor);
+      const pl=o.projetosLote||[];
+      const prods=o.tipo==='lote'
+        ? (pl.length?pl.length+' projeto(s): '+pl.map(r=>r.projeto).join(', '):'—')
+        : (pl.length?pl.map(r=>[r.cliente,r.ambiente].filter(Boolean).join(' · ')).join(' | '):'—');
+      return `<tr>
+        <td><span class="dot dot-lg" style="background:${v.cor}" title="${v.label}"></span></td>
+        <td><span class="op-num">${escHtml(o.numero)}</span></td>
+        <td class="ctr">${escHtml(o.projeto)}</td>
+        <td class="ctr">${escHtml(o.lote)||'—'}</td>
+        <td class="cel-disc" title="${escHtml(prods)}">${escHtml(prods)||'—'}</td>
+        <td><span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${escHtml(o.setor)}</span></td>
+        <td class="cel-nome">${escHtml(o.atividade)}</td>
+        <td class="cel-disc">${escHtml(funcResumo(o,'inicio'))||'—'}</td>
+        <td class="cel-disc">${o.inicio?fmtHora(o.inicio.em):'—'}</td>
+        <td class="cel-disc">${o.fim?fmtHora(o.fim.em):'—'}</td>
+        <td class="ctr op-tempo">${o.tempoMin?fmtMin(o.tempoMin):'—'}</td>
+        <td><span class="st-ro" style="color:${v.cor}"><span class="dot" style="background:${v.cor}"></span>${v.label}</span>
+          ${o.foraExpediente?'<div class="cel-sub op-fora">fora do expediente</div>':''}</td>
+        <td class="acoes">
+          <button class="icon-btn" title="Imprimir OP" onclick="imprimirOP('${o.id}')">${FICHA_SVG}</button>
+          <button class="icon-btn" title="Editar" onclick="editarOP('${o.id}')">${EDIT_SVG}</button>
+          <button class="icon-btn danger" title="Excluir" onclick="excluirOP('${o.id}')">${TRASH_SVG}</button>
+        </td></tr>`;
+    }).join('');
+  }
+  function atualizarOps(){ const b=document.getElementById('opsBody'); if(b) b.innerHTML=linhasOps(filtrarOps()); }
+  function fmtHora(iso){
+    if(!iso) return '—';
+    const d=new Date(iso); if(isNaN(d)) return '—';
+    return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  function excluirOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    const st=stOp(o);
+    const aviso = st==='encerrada'
+      ? `ATENÇÃO: esta OP já foi ENCERRADA (${fmtMin(o.tempoMin)} apontados por ${(o.fim&&o.fim.func)||'—'}).\nO registro de tempo será perdido.\n\n`
+      : (st==='parcial'?'ATENÇÃO: esta OP está EM ANDAMENTO.\n\n':'');
+    if(!confirm(`${aviso}Excluir a OP ${o.numero} (${o.atividade})?\n\nEsta ação não pode ser desfeita.`)) return;
+    db.ref('ops/'+id).remove().then(()=>toast('OP excluída')).catch(e=>toast('Erro: '+e.message));
+  }
+
+  /* ---- editar OP (mesmo encerrada) ---- */
+  function editarOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    const S=opSetorDe(o.setor), st=stOp(o);
+    const toDT=iso=>{ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return '';
+      const p2=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+'T'+p2(d.getHours())+':'+p2(d.getMinutes()); };
+    abrirModal('Editar OP '+o.numero,
+      `<div class="grid">
+        <div class="fld"><label>Setor</label><select id="edSetor" onchange="edAtivs(this.value)">
+          ${Object.values(OP_SETORES).map(x=>`<option value="${x.sigla}" ${o.setor===x.sigla?'selected':''}>${x.sigla} — ${escHtml(x.nome)}</option>`).join('')}
+        </select></div>
+        <div class="fld"><label>Atividade</label><select id="edAtiv">
+          ${S.atividades.map(a=>`<option value="${escHtml(a)}" ${o.atividade===a?'selected':''}>${escHtml(a)}</option>`).join('')}
+        </select></div>
+        <div class="fld"><label>Projeto</label><input id="edProj" value="${escHtml(o.projeto)}"></div>
+        <div class="fld"><label>Lote</label><input id="edLote" value="${escHtml(o.lote)}"></div>
+        <div class="fld"><label>Status</label><select id="edSt" onchange="edCampos(this.value)">
+          ${Object.entries(ST_OP).map(([k,vv])=>`<option value="${k}" ${st===k?'selected':''}>${vv.label}</option>`).join('')}
+        </select></div>
+        <div class="fld"><label>Funcionário</label><input id="edFunc" value="${escHtml((o.fim&&o.fim.func)||(o.inicio&&o.inicio.func)||'')}" list="edFl">
+          <datalist id="edFl">${EQUIPE.map(f=>`<option value="${escHtml(f.nome)}">`).join('')}</datalist></div>
+        <div class="fld" id="wIni"><label>Início real</label><input id="edIni" type="datetime-local" value="${toDT(o.inicio&&o.inicio.em)}"></div>
+        <div class="fld" id="wFim"><label>Fim real</label><input id="edFim" type="datetime-local" value="${toDT(o.fim&&o.fim.em)}"></div>
+        <div class="fld full"><label>Observações</label><textarea id="edObs">${escHtml(o.obs)}</textarea></div>
+      </div>
+      <p class="fld-hint" style="margin-top:12px">O tempo é recalculado pela jornada da OP (${o.jornada.ini}–${o.jornada.fim}) ao salvar.</p>`,
+      `<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+       <button class="btn btn-primary" onclick="salvarEdicaoOP('${id}')">Salvar</button>`);
+    setTimeout(()=>edCampos(st),40);
+  }
+  function edAtivs(sig){
+    const sel=document.getElementById('edAtiv');
+    sel.innerHTML=opSetorDe(sig).atividades.map(a=>`<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
+  }
+  function edCampos(st){
+    const wi=document.getElementById('wIni'), wf=document.getElementById('wFim');
+    if(!wi||!wf) return;
+    wi.style.display=(st==='nao')?'none':'flex';
+    wf.style.display=(st==='encerrada')?'flex':'none';
+  }
+  function salvarEdicaoOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    const g=i=>{const e=document.getElementById(i); return e?e.value:'';};
+    const st=g('edSt'), func=(g('edFunc')||'').trim();
+    const upd={setor:g('edSetor'),atividade:g('edAtiv'),projeto:g('edProj').trim(),
+      lote:g('edLote').trim(),obs:g('edObs'),status:st,
+      editadoEm:new Date().toISOString(),editadoPor:usuarioAtual()};
+    if(st==='nao'){ upd.inicio=null; upd.fim=null; upd.tempoMin=null; }
+    else{
+      const ini=g('edIni'); if(!ini){ toast('Informe o início real'); return; }
+      const iniISO=new Date(ini).toISOString();
+      upd.inicio={func:func||'—',em:iniISO,por:usuarioAtual(),fora:!dentroExpediente(new Date(ini),o.jornada)};
+      if(st==='encerrada'){
+        const fim=g('edFim'); if(!fim){ toast('Informe o fim real'); return; }
+        if(new Date(fim)<=new Date(ini)){ toast('O fim precisa ser depois do início'); return; }
+        const fimISO=new Date(fim).toISOString();
+        upd.fim={func:func||'—',em:fimISO,por:usuarioAtual(),fora:!dentroExpediente(new Date(fim),o.jornada)};
+        upd.tempoMin=tempoTrabalhado(iniISO,fimISO,o.jornada);
+      } else { upd.fim=null; upd.tempoMin=null; }
+    }
+    db.ref('ops/'+id).update(upd)
+      .then(()=>{ fecharModal(); toast('OP '+o.numero+' atualizada'); })
+      .catch(e=>toast('Erro: '+e.message));
+  }
+
+  /* ---- emissão ---- */
+
+
+
+  /* ===== Vinculo retroativo de lote =====================================
+     A Area de Apoio roda por projeto, antes de o lote existir. Quando o lote
+     e definido no Painel de Controle, as OPs daquele projeto que ficaram sem
+     lote passam a pertencer a ele. Regras:
+       - so preenche OPs com lote VAZIO; nunca sobrescreve lote ja gravado
+         (um projeto que entra num segundo lote nao remexe no historico);
+       - grava o lote dentro da OP (backfill), entao o calculo de conclusao
+         continua identico e o passado nao e reescrito por mudancas futuras;
+       - update multi-path: ou grava tudo, ou nao grava nada.                */
+  function vincularLotes(linhas){
+    const mapa=new Map();
+    (linhas||[]).forEach(r=>{
+      const p=String((r&&r.projeto)||'').trim(), l=String((r&&r.lote)||'').trim();
+      if(p&&l&&!mapa.has(p)) mapa.set(p,l);
+    });
+    if(!mapa.size) return Promise.resolve(0);
+    const upd={}, agora=new Date().toISOString(); let n=0;
+    OPS.forEach(o=>{
+      const p=String(o.projeto||'').trim();
+      if(!p || !mapa.has(p)) return;
+      if(String(o.lote||'').trim()) return;          // ja tem lote: intocada
+      upd['ops/'+o.id+'/lote']=mapa.get(p);
+      upd['ops/'+o.id+'/loteVinculadoEm']=agora;
+      n++;
+    });
+    if(!n) return Promise.resolve(0);
+    return db.ref().update(upd).then(()=>n);
+  }
+  function vincularLotePorProjeto(projeto,lote){
+    return vincularLotes([{projeto,lote}]);
+  }
+
+  // projetos que o lote contempla, vindos do Painel de Controle
+  function projetosDoLote(lote){
+    if(!lote) return [];
+    return PAINEL.filter(r=>String(r.lote).trim()===String(lote).trim());
+  }
+
+
+
+  
+/* ================= ACOMPANHAMENTO DA PRODUÇÃO ================= */
+  let buscaAc='', fAc={status:'',lote:''}, acompDet=null;
+  function todasAtividades(){
+    return Object.values(OP_SETORES).flatMap(S=>S.atividades.map(a=>({setor:S.sigla,atividade:a,porLote:S.tipo==='lote'})));
+  }
+  // progresso de um registro do painel (um projeto/ambiente)
+  function progressoProjeto(reg){
+    const ativs=todasAtividades(), passo=100/ativs.length;
+    let pct=0, ultima=null, ultimaEm='';
+    const detalhe=ativs.map(a=>{
+      const op = a.porLote
+        ? OPS.find(o=>o.atividade===a.atividade && String(o.lote).trim()===String(reg.lote||'').trim())
+        : OPS.find(o=>o.atividade===a.atividade && String(o.projeto).trim()===String(reg.projeto||'').trim());
+      const st=op?stOp(op):null;
+      if(st==='encerrada') pct+=passo;
+      else if(st==='parcial') pct+=passo/2;
+      if(op && st && st!=='nao'){
+        const quando=(op.fim&&op.fim.em)||(op.inicio&&op.inicio.em)||'';
+        if(quando>ultimaEm){ ultimaEm=quando; ultima={atividade:a.atividade,setor:a.setor,status:st,op}; }
+      }
+      return {...a,op,status:st||'nao'};
+    });
+    pct=Math.round(pct);
+    const cor = pct>=100?'#2f8f46' : (pct>0?'#d4930d':'#9a9aa2');
+    const rot = pct>=100?'Finalizado' : (pct>0?'Em produção':'Não iniciado');
+    return {pct,cor,rot,ultima,detalhe,total:ativs.length};
+  }
+  function renderAcompOP(){
+    TELA='acomp-op';
+    const q=(buscaAc||'').trim().toLowerCase(), t=q?q.split(/\s+/):[];
+    const linhas=PAINEL.filter(r=>{
+      if(fAc.lote && String(r.lote).trim()!==fAc.lote) return false;
+      if(!t.length) return true;
+      return t.every(x=>[r.projeto,r.lote,r.cliente,r.ambiente,r.local,r.consultor]
+        .filter(Boolean).join(' ').toLowerCase().includes(x));
+    }).map(r=>({reg:r,p:progressoProjeto(r)}))
+      .filter(o=>!fAc.status || (fAc.status==='fim'?o.p.pct>=100 : fAc.status==='ini'?(o.p.pct>0&&o.p.pct<100) : o.p.pct===0));
+    const todos=PAINEL.map(r=>progressoProjeto(r));
+    const c={nao:todos.filter(p=>p.pct===0).length, ini:todos.filter(p=>p.pct>0&&p.pct<100).length, fim:todos.filter(p=>p.pct>=100).length};
+    const lotes=[...new Set(PAINEL.map(r=>String(r.lote||'').trim()).filter(Boolean))].sort();
+    const media=todos.length?Math.round(todos.reduce((a,p)=>a+p.pct,0)/todos.length):0;
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head"><div><h1 class="page-title">Acompanhamento da Produção</h1>
+        <p class="page-sub">${PAINEL.length} projeto(s) no painel · ${todasAtividades().length} atividades por projeto</p></div></div>
+
+      <div class="ac-kpis">
+        <div class="ack"><span class="ak-v">${media}%</span><span class="ak-l">Conclusão média</span>
+          <div class="ak-bar"><i style="width:${media}%"></i></div></div>
+        <div class="ack ak-c" onclick="fAc.status=fAc.status==='nao'?'':'nao';renderAcompOP()">
+          <span class="ak-v" style="color:#9a9aa2">${c.nao}</span><span class="ak-l">Não iniciados</span></div>
+        <div class="ack ak-c" onclick="fAc.status=fAc.status==='ini'?'':'ini';renderAcompOP()">
+          <span class="ak-v" style="color:#d4930d">${c.ini}</span><span class="ak-l">Em produção</span></div>
+        <div class="ack ak-c" onclick="fAc.status=fAc.status==='fim'?'':'fim';renderAcompOP()">
+          <span class="ak-v" style="color:#2f8f46">${c.fim}</span><span class="ak-l">Finalizados</span></div>
+      </div>
+
+      <div class="inv-filtros">
+        <input class="search" value="${buscaAc.replace(/"/g,'&quot;')}" placeholder="Buscar por projeto, lote, cliente ou ambiente..."
+          oninput="buscaAc=this.value; clearTimeout(window._ta); window._ta=setTimeout(renderAcompOP,250)">
+        <select onchange="fAc.lote=this.value; renderAcompOP()"><option value="">Todos os lotes</option>
+          ${lotes.map(l=>`<option value="${escHtml(l)}" ${fAc.lote===l?'selected':''}>Lote ${escHtml(l)}</option>`).join('')}</select>
+        ${(buscaAc||fAc.lote||fAc.status)?`<button class="btn btn-ghost btn-sm" onclick="buscaAc='';fAc={status:'',lote:''};renderAcompOP()">Limpar</button>`:''}
+      </div>
+
+      ${linhas.length?`<div class="table-wrap"><table class="tbl tbl-acomp">
+        <thead><tr><th style="width:28px"></th><th style="width:96px">Projeto</th><th style="width:70px">Lote</th>
+          <th>Ambiente</th><th>Cliente</th><th style="width:230px">Status atual</th><th style="width:190px">Conclusão</th></tr></thead>
+        <tbody>${linhas.map(({reg,p})=>`<tr class="ac-row" onclick="detalheAcomp('${reg.id}')">
+          <td><span class="dot dot-lg" style="background:${p.cor}" title="${p.rot}"></span></td>
+          <td><b class="ac-proj">${escHtml(reg.projeto)||'—'}</b></td>
+          <td class="ctr">${escHtml(reg.lote)||'—'}</td>
+          <td class="cel-nome">${escHtml(reg.ambiente)||'—'}</td>
+          <td class="cel-disc">${escHtml(reg.cliente)||'—'}</td>
+          <td>${p.ultima?`<span class="ac-st"><b>${escHtml(p.ultima.atividade)}</b>
+              <i style="color:${ST_OP[p.ultima.status].cor}">${ST_OP[p.ultima.status].label}</i></span>`
+            :'<span class="ac-st vazio">Aguardando início</span>'}</td>
+          <td><div class="ac-pct"><span style="color:${p.cor}">${p.pct}%</span>
+            <div class="ac-bar"><i style="width:${p.pct}%;background:${p.cor}"></i></div></div></td>
+        </tr>`).join('')}</tbody></table></div>`
+      :`<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24">${I.prod}</svg></div>
+        <h3>Nada para acompanhar</h3><p>${PAINEL.length?'Nenhum projeto atende aos filtros.':'Cadastre os projetos no Painel de Controle.'}</p></div>`}
+    </div>`;
+  }
+  function detalheAcomp(regId){
+    const reg=PAINEL.find(r=>r.id===regId); if(!reg) return;
+    TELA='acomp-det'; acompDet=regId;
+    const p=progressoProjeto(reg);
+    const D=p.detalhe;
+    const feitas=D.filter(d=>d.status==='encerrada');
+    const emCurso=D.filter(d=>d.status==='parcial');
+    const semOp=D.filter(d=>!d.op);
+    const tempoTotal=feitas.reduce((a,d)=>a+(d.op.tempoMin||0),0);
+    // linha do tempo ordenada
+    const eventos=[];
+    D.forEach(d=>{
+      if(d.op&&d.op.inicio) eventos.push({em:d.op.inicio.em,tipo:'ini',d,func:d.op.inicio.func,fora:d.op.inicio.fora});
+      if(d.op&&d.op.fim) eventos.push({em:d.op.fim.em,tipo:'fim',d,func:d.op.fim.func,fora:d.op.fim.fora});
+    });
+    eventos.sort((a,b)=>String(a.em).localeCompare(String(b.em)));
+    // por funcionário
+    const porFunc={};
+    feitas.forEach(d=>{ equipeOP(d.op).forEach(f=>{ const _=0; });
+      const f=funcResumo(d.op,'fim')||'—';
+      porFunc[f]=porFunc[f]||{nome:f,min:0,ops:0}; porFunc[f].min+=d.op.tempoMin||0; porFunc[f].ops++; });
+    const funcs=Object.values(porFunc).sort((a,b)=>b.min-a.min);
+    const maxF=funcs.length?Math.max(...funcs.map(f=>f.min)):1;
+    // por setor
+    const porSetor=Object.values(OP_SETORES).map(S=>{
+      const ds=D.filter(d=>d.setor===S.sigla);
+      const ok=ds.filter(d=>d.status==='encerrada').length;
+      const min=ds.filter(d=>d.status==='encerrada').reduce((a,d)=>a+(d.op.tempoMin||0),0);
+      return {S,total:ds.length,ok,min,pct:ds.length?Math.round(ok/ds.length*100):0};
+    });
+    const maxS=Math.max(1,...porSetor.map(x=>x.min));
+    const primEv=eventos[0], ultEv=eventos[eventos.length-1];
+    const lead=(primEv&&ultEv&&primEv!==ultEv)?tempoTrabalhado(primEv.em,ultEv.em,(D.find(d=>d.op)||{op:{jornada:JORNADA_PADRAO}}).op.jornada):0;
+
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head">
+        <div><h1 class="page-title">Projeto ${escHtml(reg.projeto)||'—'}</h1>
+          <p class="page-sub">${escHtml(reg.ambiente)||'—'} · ${escHtml(reg.cliente)||'—'} · Lote ${escHtml(reg.lote)||'—'}</p></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="renderAcompOP()">Voltar</button>
+          <button class="btn btn-primary" onclick="window.print()">Imprimir</button></div></div>
+
+      <div class="rp-topo">
+        <div class="rp-donut">
+          ${donutSVG(p.pct,p.cor)}
+          <div class="rpd-l"><b style="color:${p.cor}">${p.rot}</b>
+            <span>${feitas.length} de ${D.length} atividades concluídas</span></div>
+        </div>
+        <div class="rp-kpis">
+          <div class="rpk"><span class="rk-v">${fmtMin(tempoTotal)}</span><span class="rk-l">Tempo produtivo</span></div>
+          <div class="rpk"><span class="rk-v">${lead?fmtMin(lead):'—'}</span><span class="rk-l">Lead time na jornada</span></div>
+          <div class="rpk"><span class="rk-v">${funcs.length}</span><span class="rk-l">Pessoas envolvidas</span></div>
+          <div class="rpk"><span class="rk-v" style="color:${emCurso.length?'#d4930d':'var(--texto)'}">${emCurso.length}</span><span class="rk-l">Em execução</span></div>
+        </div>
+      </div>
+
+      <div class="rp-cols">
+        <section class="fs"><h3 class="fs-title">Avanço por setor</h3>
+          ${porSetor.map(x=>`<div class="rs-l">
+            <div class="rs-h"><b style="color:${x.S.cor}">${x.S.sigla}</b>
+              <span>${escHtml(x.S.nome)}</span>
+              <i>${x.ok}/${x.total}</i></div>
+            <div class="rs-bar"><span style="width:${x.pct}%;background:${x.S.cor}"></span></div>
+            <div class="rs-t">${x.min?fmtMin(x.min):'sem tempo apontado'}</div>
+          </div>`).join('')}
+        </section>
+
+        <section class="fs"><h3 class="fs-title">Tempo por funcionário</h3>
+          ${funcs.length?funcs.map(f=>`<div class="rf-l">
+            <div class="rf-n">${escHtml(f.nome)}<i>${f.ops} OP(s)</i></div>
+            <div class="rf-bar"><span style="width:${Math.round(f.min/maxF*100)}%"></span></div>
+            <div class="rf-t">${fmtMin(f.min)}</div>
+          </div>`).join(''):'<p class="aviso">Nenhuma atividade encerrada ainda.</p>'}
+        </section>
+      </div>
+
+      <section class="fs" style="margin-top:18px"><h3 class="fs-title">Atividades</h3>
+        <div class="table-wrap"><table class="tbl">
+          <thead><tr><th style="width:26px"></th><th style="width:56px">Setor</th><th>Atividade</th>
+            <th style="width:110px">OP</th><th style="width:130px">Funcionário</th>
+            <th style="width:118px">Início</th><th style="width:118px">Fim</th>
+            <th style="width:86px">Tempo</th><th style="width:120px">Status</th></tr></thead>
+          <tbody>${D.map(d=>{
+            const v=ST_OP[d.status], S=opSetorDe(d.setor), o=d.op;
+            return `<tr>
+              <td><span class="dot" style="background:${v.cor}"></span></td>
+              <td><span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${d.setor}</span></td>
+              <td class="cel-nome">${escHtml(d.atividade)}${d.porLote?'<i class="tag-lote">lote</i>':''}</td>
+              <td>${o?`<span class="op-num">${escHtml(o.numero)}</span>`:'<span class="sem-op">não emitida</span>'}</td>
+              <td class="cel-disc">${escHtml(o?(funcResumo(o,'fim')||funcResumo(o,'inicio')):'')||'—'}</td>
+              <td class="cel-disc">${o&&o.inicio?fmtHora(o.inicio.em):'—'}</td>
+              <td class="cel-disc">${o&&o.fim?fmtHora(o.fim.em):'—'}</td>
+              <td class="ctr op-tempo">${o&&o.tempoMin?fmtMin(o.tempoMin):'—'}</td>
+              <td><span class="st-ro" style="color:${v.cor}">${v.label}</span>
+                ${o&&o.foraExpediente?'<div class="cel-sub op-fora">fora do expediente</div>':''}</td>
+            </tr>`;}).join('')}</tbody></table></div>
+        ${semOp.length?`<p class="aviso" style="margin-top:12px"><b>${semOp.length} atividade(s) sem OP emitida:</b>
+          ${semOp.map(d=>escHtml(d.atividade)).join(', ')}.</p>`:''}
+      </section>
+
+      ${eventos.length?`<section class="fs" style="margin-top:18px"><h3 class="fs-title">Linha do tempo</h3>
+        <div class="tl">${eventos.map(e=>{
+          const S=opSetorDe(e.d.setor);
+          return `<div class="tl-i">
+            <div class="tl-p" style="background:${e.tipo==='ini'?'#2f8f46':'#982424'}"></div>
+            <div class="tl-c">
+              <div class="tl-h"><b>${escHtml(e.d.atividade)}</b>
+                <span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${e.d.setor}</span>
+                <em>${e.tipo==='ini'?'iniciou':'encerrou'}</em>
+                ${e.fora?'<i class="tl-f">fora do expediente</i>':''}</div>
+              <div class="tl-d">${escHtml(e.func||'—')} · ${fmtHora(e.em)}
+                ${e.tipo==='fim'&&e.d.op.tempoMin?` · <b>${fmtMin(e.d.op.tempoMin)}</b>`:''}</div>
+            </div></div>`;}).join('')}</div>
+      </section>`:''}
+    </div>`;
+  }
+  function donutSVG(pct,cor){
+    const r=52, c=2*Math.PI*r, off=c*(1-Math.min(100,pct)/100);
+    return `<svg viewBox="0 0 130 130" class="dn">
+      <circle cx="65" cy="65" r="${r}" fill="none" stroke="#e6e6de" stroke-width="13"/>
+      <circle cx="65" cy="65" r="${r}" fill="none" stroke="${cor}" stroke-width="13" stroke-linecap="round"
+        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 65 65)"/>
+      <text x="65" y="70" text-anchor="middle" font-size="27" font-weight="700" fill="${cor}"
+        font-family="Poppins,sans-serif">${pct}%</text></svg>`;
+  }
+
+  
+  /* ================= RENDIMENTO POR FUNCIONÁRIO ================= */
+  let rendDe='', rendAte='', rendSetor='', rendProj='', rendAtiv='', rendFunc=null, rendOrd='total';
+  // barras por dia do período
+
+  /* ================= IMPRESSÃO EM LOTE ================= */
+  let impF={base:'', tipo:'lote'}, impSel=new Set();
+  function renderImprimir(){
+    TELA='imp-ops'; 
+    const lotes=[...new Set(OPS.map(o=>o.lote).filter(Boolean))].sort();
+    const projs=[...new Set(OPS.map(o=>o.projeto).filter(Boolean))].sort();
+    const alvo=impF.base
+      ? OPS.filter(o=>impF.tipo==='lote'?String(o.lote)===impF.base:String(o.projeto)===impF.base)
+      : [];
+    // agrupa por atividade
+    const grupos={};
+    alvo.forEach(o=>{ (grupos[o.atividade]=grupos[o.atividade]||[]).push(o); });
+    const totalSel=impSel.size;
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head"><div><h1 class="page-title">Imprimir Ordens de Produção</h1>
+        <p class="page-sub">Filtre por lote ou projeto e escolha as atividades</p></div>
+        <button class="btn btn-ghost" onclick="renderOPs()">Voltar</button></div>
+
+      <div class="imp-layout">
+        <aside class="imp-lado">
+          <div class="il-filtro">
+            <div class="il-tabs">
+              <button class="il-t ${impF.tipo==='lote'?'on':''}" onclick="impF.tipo='lote';impF.base='';impSel.clear();renderImprimir()">Por lote</button>
+              <button class="il-t ${impF.tipo==='projeto'?'on':''}" onclick="impF.tipo='projeto';impF.base='';impSel.clear();renderImprimir()">Por projeto</button>
+            </div>
+            <input class="search" list="lBase" value="${impF.base.replace(/"/g,'&quot;')}"
+              placeholder="${impF.tipo==='lote'?'Número do lote...':'Número do projeto...'}"
+              oninput="impF.base=this.value.trim(); impSel.clear(); clearTimeout(window._ti); window._ti=setTimeout(renderImprimir,350)">
+            <datalist id="lBase">${(impF.tipo==='lote'?lotes:projs).map(x=>`<option value="${escHtml(x)}">`).join('')}</datalist>
+          </div>
+
+          ${impF.base?`
+          <div class="il-res">
+            <div class="ilr-n"><b>${alvo.length}</b><span>OPs</span></div>
+            <div class="ilr-n"><b>${Object.keys(grupos).length}</b><span>atividades</span></div>
+            <div class="ilr-n"><b>${totalSel}</b><span>selecionadas</span></div>
+          </div>
+          <div class="il-acoes">
+            <button class="link-btn" onclick="impTodos(true)">Todos</button>
+            <button class="link-btn" onclick="impTodos(false)">Limpar</button>
+          </div>
+          <div class="il-grupos">
+            ${Object.keys(grupos).length?Object.entries(grupos).sort().map(([at,ops])=>{
+              const marc=ops.filter(o=>impSel.has(o.id)).length;
+              const S=opSetorDe(ops[0].setor);
+              return `<button class="il-g ${marc?'on':''}" onclick="impGrupo('${at.replace(/'/g,"\\'")}')">
+                <span class="ilg-ck">${marc===ops.length?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7"/></svg>':(marc?'<i></i>':'')}</span>
+                <span class="ilg-t"><b>${escHtml(at)}</b><i style="color:${S.cor}">${escHtml(ops[0].setor)}</i></span>
+                <span class="ilg-n">${marc}/${ops.length}</span></button>`;}).join('')
+            :`<p class="aviso">Nenhuma OP encontrada para este ${impF.tipo}.</p>`}
+          </div>
+          <button class="btn btn-primary il-btn" ${totalSel?'':'disabled style="opacity:.5"'} onclick="imprimirSelecionadas()">
+            Abrir / Imprimir ${totalSel||''}</button>`
+          :`<p class="aviso">Informe o ${impF.tipo==='lote'?'lote':'projeto'} para listar as OPs.</p>`}
+        </aside>
+
+        <section class="imp-prev">
+          ${totalSel?`<div class="ip-h">Prévia · ${totalSel} página(s)</div>
+            <div class="ip-lista">${OPS.filter(o=>impSel.has(o.id)).map(o=>{
+              const S=opSetorDe(o.setor), v=ST_OP[stOp(o)];
+              return `<div class="ip-c">
+                <div class="ip-n"><span class="op-num">${escHtml(o.numero)}</span>
+                  <span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${escHtml(o.setor)}</span>
+                  <span class="dot" style="background:${v.cor}" title="${v.label}"></span></div>
+                <div class="ip-a">${escHtml(o.atividade)}</div>
+                <div class="ip-d">${o.tipo==='lote'?`Lote ${escHtml(o.lote)} · ${(o.projetosLote||[]).length} projeto(s)`
+                  :`Projeto ${escHtml(o.projeto)}${(o.projetosLote||[])[0]&&(o.projetosLote||[])[0].cliente?' · '+escHtml(o.projetosLote[0].cliente):''}`}</div>
+                <button class="icon-btn danger ip-x" onclick="impMarcar('${o.id}',false)">${X_SVG}</button>
+              </div>`;}).join('')}</div>`
+          :`<div class="ip-vazio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9V3h12v6M6 18H4v-6h16v6h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg>
+              <b>Nenhuma OP selecionada</b>
+              <span>Escolha o ${impF.tipo==='lote'?'lote':'projeto'} e marque as atividades que deseja imprimir.</span>
+            </div>`}
+        </section>
+      </div>
+    </div>`;
+  }
+  function impBase(){
+    if(!impF.base) return [];
+    return OPS.filter(o=>impF.tipo==='lote'?String(o.lote)===impF.base:String(o.projeto)===impF.base);
+  }
+  function impGrupo(at){
+    const ops=impBase().filter(o=>o.atividade===at);
+    const todos=ops.every(o=>impSel.has(o.id));
+    ops.forEach(o=>todos?impSel.delete(o.id):impSel.add(o.id));
+    renderImprimir();
+  }
+  function impTodos(on){ impBase().forEach(o=>on?impSel.add(o.id):impSel.delete(o.id)); renderImprimir(); }
+  function impMarcar(id,on){ on?impSel.add(id):impSel.delete(id); renderImprimir(); }
+  function imprimirSelecionadas(){ imprimirOPs([...impSel]); }
+
+  /* ================= 4. APONTAMENTO ================= */
+  let bipBuf='', bipT=null, apFuncs=[];
+  function renderApont(){
+    TELA='apont'; apontOP=null; apFuncs=[];
+    view.innerHTML=`<div class="page">
+      <div class="page-head"><div><h1 class="page-title">Apontamento</h1>
+        <p class="page-sub">Bipe o código de barras da OP ou digite o número</p></div></div>
+      <div class="bip-box">
+        <div class="bip-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6V4h3M21 6V4h-3M3 18v2h3M21 18v2h-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div>
+        <h2>Bipe a Ordem de Produção</h2>
+        <p>Use o leitor no código de barras da OP, ou digite o número e pressione Enter.</p>
+        <input class="bip-in" id="bipIn" autocomplete="off" placeholder="287801001"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();lerBip(this.value);this.value='';}">
+      </div>
+      ${OPS.filter(o=>['parcial','pausada'].includes(stOp(o))).length?`
+      <section class="fs" style="margin-top:20px"><h3 class="fs-title">Em andamento agora</h3>
+        <div class="and-grid">${OPS.filter(o=>['parcial','pausada'].includes(stOp(o))).map(o=>{
+          const S=opSetorDe(o.setor);
+          return `<button class="and-c" onclick="abrirApont('${o.id}')">
+            <div class="ac-t"><span class="op-num">${escHtml(o.numero)}</span>
+              <span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${escHtml(o.setor)}</span></div>
+            <div class="ac-a">${escHtml(o.atividade)}</div>
+            <div class="ac-f">${escHtml(funcResumo(o,'inicio'))} · desde ${fmtHora(o.inicio&&o.inicio.em)}</div>
+            <div class="ac-tm">${fmtMin(tempoLiquido(o,new Date().toISOString()))} ${htmlLeadMini(o)}</div>
+          </button>`;}).join('')}</div></section>`:''}
+    </div>`;
+    setTimeout(()=>{const i=document.getElementById('bipIn'); if(i) i.focus();},60);
+  }
+  function lerBip(cod){
+    cod=String(cod||'').trim().toUpperCase();
+    if(!cod) return;
+    let acao=null, num=cod;
+    if(/^I\d+$/.test(cod)){ acao='inicio'; num=cod.slice(1); }
+    else if(/^F\d+$/.test(cod)){ acao='fim'; num=cod.slice(1); }
+    const o=OPS.find(x=>String(x.numero)===num);
+    if(!o){ toast('OP '+num+' não encontrada'); return; }
+    if(acao==='inicio'){ abrirApont(o.id); setTimeout(()=>iniciarOP(o.id),120); return; }
+    if(acao==='fim'){ abrirApont(o.id); setTimeout(()=>finalizarOP(o.id),120); return; }
+    abrirApont(o.id);
+  }
+  function abrirApont(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    if(apontOP!==id) apFuncs=[];        // trocou de OP: limpa a seleção anterior
+    apontOP=id; TELA='apont-op';
+    const st=stOp(o), v=ST_OP[st], S=opSetorDe(o.setor);
+    const aptos=aptosPara(o.atividade,o.setor);
+    apListaAtual=(st==='nao')?aptos:(aptos.length?aptos:equipeOP(o).map(n=>({nome:n})));
+    if(st!=='nao'&&!apFuncs.length) apFuncs=funcsDe(o,'inicio').slice();
+    const agora=new Date();
+    const fora=!dentroExpediente(agora,o.jornada);
+    const decorrido=o.inicio&&!o.fim?tempoLiquido(o,agora.toISOString()):0;
+    view.innerHTML=`<div class="page">
+      <div class="page-head"><div><h1 class="page-title">Apontamento</h1>
+        <p class="page-sub">PCP · Ordens de Produção</p></div>
+        <button class="btn btn-ghost" onclick="renderApont()">Voltar</button></div>
+
+      <div class="ap-card">
+        <div class="ap-h" style="border-color:${v.cor}">
+          <div><span class="ap-lbl">Ordem de Produção</span>
+            <div class="ap-num">${escHtml(o.numero)}</div></div>
+          <div class="ap-st" style="background:${v.cor}18;color:${v.cor}">
+            <span class="dot" style="background:${v.cor}"></span>${v.label}</div>
+        </div>
+        <div class="ap-info">
+          <div class="ai"><span>Projeto</span><b>${escHtml(o.projeto)}</b></div>
+          <div class="ai"><span>Lote</span><b>${escHtml(o.lote)||'—'}</b></div>
+          <div class="ai"><span>Setor</span><b style="color:${S.cor}">${escHtml(o.setor)} — ${escHtml(S.nome)}</b></div>
+          <div class="ai"><span>Atividade</span><b>${escHtml(o.atividade)}</b></div>
+          <div class="ai wide"><span>${o.tipo==='lote'?'Projetos do lote':'Cliente / Ambiente'}</span>
+            <b>${(o.projetosLote||[]).length
+              ? (o.tipo==='lote'
+                 ? (o.projetosLote||[]).map(r=>escHtml(r.projeto)+(r.cliente?' ('+escHtml(r.cliente)+')':'')).join(', ')
+                 : (o.projetosLote||[]).map(r=>[r.cliente,r.ambiente].filter(Boolean).map(escHtml).join(' · ')).join(' | '))
+              : '—'}</b></div>
+          <div class="ai"><span>Jornada</span><b>${fmtJornada(o.jornada)}</b></div>
+        </div>
+
+        ${fora?`<div class="ap-fora">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Agora são <b>${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</b> — fora do horário de expediente desta OP.</span>
+        </div>`:''}
+
+        ${htmlLead(o)}
+        ${htmlExtra(o)}
+
+        ${st==='nao'?`
+          <div class="ap-sec"><label class="ap-l">Quem vai executar?</label>
+            ${aptos.length?`<div class="func-grid">${aptos.map((f,i)=>
+              `<button class="func-b ${apFuncs.includes(f.nome)?'on':''}" onclick="togFunc(${i})">
+                 <span class="fb-ck"></span>${escHtml(f.nome)}</button>`).join('')}</div>
+              ${apFuncs.length>1?`<p class="fld-hint" style="margin-top:8px">${apFuncs.length} pessoas nesta atividade</p>`:''}`
+            :`<p class="aviso">Nenhum funcionário cadastrado para <b>${escHtml(o.atividade)}</b>. Cadastre em <b>Equipe Produtiva</b>.</p>`}
+          </div>
+          <button class="ap-btn ap-ini" ${apFuncs.length?'':'disabled'} onclick="iniciarOP('${o.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Iniciar OP${apFuncs.length?' — '+escHtml(apFuncs.join(', ')):''}</button>
+          <p class="ap-dica">Ou bipe o código de barras de <b>INÍCIO</b> impresso na OP.</p>`
+        :(st==='parcial'||st==='pausada')?`
+          <div class="ap-and ${st==='pausada'?'pausado':''}">
+            <div class="aa-l"><span>Iniciada por</span><b>${escHtml(nomesFuncs(o,'inicio'))||'—'}</b></div>
+            <div class="aa-l"><span>Início</span><b>${fmtHora(o.inicio.em)}</b></div>
+            <div class="aa-l"><span>${st==='pausada'?'Tempo até a pausa':'Decorrido na jornada'}</span>
+              <b class="aa-t">${fmtMin(decorrido)}</b></div>
+          </div>
+          ${totalPausas(o)?`<div class="ap-pausas">
+            ${pausasDe(o).map((pp,pi)=>`<div class="app-l">
+              <span class="app-n">${pi+1}</span>
+              <span class="app-h">${fmtHora(pp.de)} → ${pp.ate?fmtHora(pp.ate):'<b>em curso</b>'}</span>
+              <span class="app-t">${fmtMin(tempoTrabalhado(pp.de,pp.ate||new Date().toISOString(),o.jornada))}</span>
+              ${pp.motivo?`<span class="app-m">${escHtml(pp.motivo)}</span>`:''}</div>`).join('')}
+            <div class="app-tot">Total pausado <b>${fmtMin(minutosPausados(o))}</b></div>
+          </div>`:''}
+          ${st==='pausada'?`
+            <div class="ap-pausado"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              <div><b>OP pausada</b><span>O tempo parou. Retome para continuar a contagem.</span></div></div>
+            <button class="ap-btn ap-ret" onclick="retomarOP('${o.id}')">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Retomar OP</button>`
+          :`<div class="ap-sec"><label class="ap-l">Quem está encerrando?</label>
+            <div class="func-grid">${apListaAtual.map((f,i)=>
+              `<button class="func-b ${apFuncs.includes(f.nome)?'on':''}" onclick="togFunc(${i})">
+                 <span class="fb-ck"></span>${escHtml(f.nome)}</button>`).join('')}</div></div>
+          <div class="ap-duplo">
+            <button class="ap-btn ap-pau" onclick="pausarOP('${o.id}')">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>Pausar</button>
+            <button class="ap-btn ap-fim" onclick="finalizarOP('${o.id}')">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>Encerrar OP</button>
+          </div>
+          <p class="ap-dica">Ou bipe o código de barras de <b>FIM</b> impresso na OP.</p>`}`
+        :`
+          <div class="ap-fim-res">
+            <div class="af-l"><span>Início</span><b>${fmtHora(o.inicio&&o.inicio.em)}</b><i>${escHtml((o.inicio&&o.inicio.func)||'')}</i></div>
+            <div class="af-seta">→</div>
+            <div class="af-l"><span>Fim</span><b>${fmtHora(o.fim&&o.fim.em)}</b><i>${escHtml((o.fim&&o.fim.func)||'')}</i></div>
+            <div class="af-t"><span>Tempo realizado</span><b>${fmtMin(o.tempoMin)}</b></div>
+          </div>
+          <button class="btn btn-ghost" style="width:100%;margin-top:14px" onclick="imprimirOP('${o.id}')">Imprimir OP</button>`}
+      </div>
+    </div>`;
+  }
+  let apListaAtual=[];
+  function togFunc(i){
+    const f=apListaAtual[i]; if(!f) return;
+    const k=apFuncs.indexOf(f.nome);
+    if(k>=0) apFuncs.splice(k,1); else apFuncs.push(f.nome);
+    abrirApont(apontOP);
+  }
+  function confirmaFora(o,quando){
+    if(dentroExpediente(quando,o.jornada)) return true;
+    return confirm('Você está fora do horário de expediente ('+motivoFora(quando,o.jornada)+').\n\n'+
+      'Jornada: '+fmtJornada(o.jornada)+'\nAgora: '+quando.toLocaleString('pt-BR')+
+      '\n\nTem certeza que deseja continuar?');
+  }
+  function confirmaExtra(o,quando){
+    if(dentroExpediente(quando,o.jornada)) return false;
+    return confirm('APONTAR COMO HORA EXTRA?\n\nVocê está iniciando '+motivoFora(quando,o.jornada)+'.\n\n'+
+      'Marcando como hora extra, este tempo é contado separadamente e você precisa encerrar a OP manualmente.\n\n'+
+      'OK = hora extra · Cancelar = apontamento comum (sem contar o tempo fora da jornada)');
+  }
+  function iniciarOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    if(stOp(o)==='pausada'){ retomarOP(id); return; }
+    if(stOp(o)!=='nao'){ toast('Esta OP já foi iniciada'); return; }
+    const lista=apFuncs.length?apFuncs.slice():[(aptosPara(o.atividade,o.setor)[0]||{}).nome].filter(Boolean);
+    if(!lista.length){ toast('Selecione ao menos um funcionário'); return; }
+    const agora=new Date();
+    if(!confirmaFora(o,agora)) return;
+    const fora=!dentroExpediente(agora,o.jornada);
+    // fora da jornada a sessão de hora extra já abre junto — o operador encerra pelo botão
+    const he=foraJornada(agora,o.jornada);
+    const agoraISO=agora.toISOString();
+    const upd={status:'parcial',
+      inicio:{funcs:lista,func:lista[0],em:agoraISO,por:usuarioAtual(),fora},
+      foraExpediente:fora||!!o.foraExpediente,
+      extra:he||!!o.extra};
+    if(he) upd.extras=extrasDe(o).concat([{de:agoraISO,ate:null,por:usuarioAtual(),funcs:lista}]);
+    const lm=leadMinOP(o); if(lm!=null) upd.leadMin=lm;
+    db.ref('ops/'+id).update(upd)
+      .then(()=>{ toast('OP iniciada'+(he?' em HORA EXTRA':'')+' — '+lista.join(', ')); abrirApont(id); })
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function finalizarOP(id){
+    const o=OPS.find(x=>x.id===id); if(!o) return;
+    if(stOp(o)==='nao'){ toast('Esta OP ainda não foi iniciada'); return; }
+    if(stOp(o)==='encerrada'){ toast('Esta OP já está encerrada'); return; }
+    const lista=apFuncs.length?apFuncs.slice():funcsDe(o,'inicio');
+    const agora=new Date(), agoraISO=agora.toISOString();
+    if(!confirmaFora(o,agora)) return;
+    const fora=!dentroExpediente(agora,o.jornada);
+    const pl=pausasDe(o).map(p=>(p.de&&!p.ate)?{...p,ate:agoraISO}:p);
+    const xl=extrasDe(o).map(s=>(s.de&&!s.ate)?{...s,ate:agoraISO}:s);   // fecha hora extra aberta
+    const tmp={...o,pausas:pl,extras:xl};
+    const norm=tempoNormalOP(tmp,agoraISO), ext=tempoExtraOP(tmp,agoraISO);
+    const pausado=minutosPausados(tmp,agoraISO);
+    const lm=leadMinOP(o);
+    db.ref('ops/'+id).update({status:'encerrada',
+      fim:{funcs:lista,func:lista[0]||'',em:agoraISO,por:usuarioAtual(),fora},
+      pausas:pl, tempoMin:norm+ext, tempoNormalMin:norm, tempoExtraMin:ext, tempoPausaMin:pausado,
+      foraExpediente:fora||!!o.foraExpediente,
+      ...(xl.length?{extras:xl}:{}),
+      ...(lm!=null?{leadMin:lm, leadDesvioMin:(norm+ext)-lm}:{})})
+      .then(()=>{ toast('OP encerrada — '+fmtMin(norm+ext)+(ext?' ('+fmtMin(ext)+' extra)':'')
+        +(lm!=null?((norm+ext)>lm?' · ATRASO de '+fmtMin((norm+ext)-lm):' · dentro do lead time'):'')); abrirApont(id); })
+      .catch(e=>toast('Erro: '+e.message));
+  }
+
+
+/* ================= LEAD TIME — cadastro e painel de atrasos ================= */
+  const LT={ aba:'cad', proj:null, busca:'', filtro:'' };
+
+  function ltOpDoRegistro(reg,a){
+    return a.porLote
+      ? OPS.find(o=>o.atividade===a.atividade && String(o.lote).trim()===String(reg.lote||'').trim())
+      : OPS.find(o=>o.atividade===a.atividade && String(o.projeto).trim()===String(reg.projeto||'').trim());
+  }
+  function ltQtdProjeto(reg){
+    const l=LEADS[ltSlug(String((reg&&reg.projeto)||'').trim())]||{};
+    return Object.keys(l).filter(k=>Number(l[k]&&l[k].horas)>0).length;
+  }
+  function ltResumoProjeto(reg){
+    let ok=0, atr=0, encAtr=0;
+    todasAtividades().forEach(a=>{
+      const op=ltOpDoRegistro(reg,a); if(!op) return;
+      const L=leadStatus(op); if(!L) return;
+      if(L.atrasado){ atr++; if(L.st==='encerrada') encAtr++; } else ok++;
+    });
+    return {ok,atr,encAtr};
+  }
+
+  function renderLead(aba){
+    TELA='lead';
+    if(aba){ LT.aba=aba; if(aba==='dash') LT.proj=null; }
+    if(LT.aba==='cad' && LT.proj) return ltTelaProjeto(LT.proj);
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head"><div><h1 class="page-title">Lead time</h1>
+        <p class="page-sub">Prazo de execução por atividade, definido projeto a projeto</p></div></div>
+      <div class="lt-abas">
+        <button class="lta ${LT.aba==='cad'?'on':''}" onclick="renderLead('cad')">Cadastro de Lead time</button>
+        <button class="lta ${LT.aba==='dash'?'on':''}" onclick="renderLead('dash')">Painel de atrasos</button>
+      </div>
+      ${LT.aba==='cad'?ltHtmlCadastro():ltHtmlDash()}
+    </div>`;
+  }
+
+  /* ---------- aba 1: cadastro ---------- */
+  function ltHtmlCadastro(){
+    const q=(LT.busca||'').trim().toLowerCase(), t=q?q.split(/\s+/):[];
+    const linhas=PAINEL.filter(r=>!t.length||t.every(x=>[r.projeto,r.lote,r.cliente,r.ambiente]
+      .filter(Boolean).join(' ').toLowerCase().includes(x)));
+    const nAt=todasAtividades().length;
+    const comLead=PAINEL.filter(r=>ltQtdProjeto(r)>0).length;
+    return `<p class="aviso" style="margin-bottom:14px">O cadastro é <b>opcional</b>: preencha só as atividades que
+      precisam de prazo. ${comLead} de ${PAINEL.length} projeto(s) já têm pelo menos um prazo definido.</p>
+      <div class="inv-filtros">
+        <input class="search" value="${escHtml(LT.busca)}" placeholder="Buscar por projeto, lote, cliente ou ambiente..."
+          oninput="LT.busca=this.value; clearTimeout(window._tlt); window._tlt=setTimeout(()=>renderLead(),250)">
+        ${LT.busca?`<button class="btn btn-ghost btn-sm" onclick="LT.busca='';renderLead()">Limpar</button>`:''}
+      </div>
+      ${linhas.length?`<div class="table-wrap"><table class="tbl tbl-acomp">
+        <thead><tr><th style="width:96px">Projeto</th><th style="width:70px">Lote</th><th>Ambiente</th>
+          <th>Cliente</th><th style="width:170px">Prazos definidos</th><th style="width:150px">Situação agora</th></tr></thead>
+        <tbody>${linhas.map(r=>{
+          const n=ltQtdProjeto(r), s=ltResumoProjeto(r);
+          return `<tr class="ac-row" onclick="ltAbrir('${r.id}')">
+            <td><b class="ac-proj">${escHtml(r.projeto)||'—'}</b></td>
+            <td class="ctr">${escHtml(r.lote)||'—'}</td>
+            <td class="cel-nome">${escHtml(r.ambiente)||'—'}</td>
+            <td class="cel-disc">${escHtml(r.cliente)||'—'}</td>
+            <td>${n?`<span class="lt-tag">${n} de ${nAt} atividade(s)</span>`
+                   :'<span class="sem-op">nenhum prazo definido</span>'}</td>
+            <td>${s.atr?`<span class="lt-mini atr"><i class="lt-dot"></i>${s.atr} atrasada(s)</span>`
+                 :(s.ok?`<span class="lt-mini"><i class="lt-dot"></i>${s.ok} no prazo</span>`
+                       :'<span class="sem-op">—</span>')}</td>
+          </tr>`;}).join('')}</tbody></table></div>`
+      :`<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24">${I.pcp}</svg></div>
+        <h3>Nenhum projeto</h3><p>${PAINEL.length?'Nenhum projeto atende à busca.':'Cadastre os projetos no Painel de Controle.'}</p></div>`}`;
+  }
+  function ltAbrir(id){ LT.proj=id; renderLead('cad'); }
+  function ltVoltar(){ LT.proj=null; renderLead('cad'); }
+
+  function ltTelaProjeto(id){
+    const reg=PAINEL.find(r=>r.id===id); if(!reg){ LT.proj=null; return renderLead('cad'); }
+    TELA='lead';
+    const proj=String(reg.projeto||'').trim();
+    const ativs=todasAtividades();
+    const totH=ativs.reduce((a,x)=>a+(leadHoras(proj,x.atividade)||0),0);
+    const porSetor=Object.values(OP_SETORES).map(S=>({S,
+      itens:ativs.map((a,i)=>({a,i})).filter(x=>x.a.setor===S.sigla)}));
+    view.innerHTML=`<div class="page page-wide">
+      <div class="page-head">
+        <div><h1 class="page-title">Lead time · projeto ${escHtml(proj)||'—'}</h1>
+          <p class="page-sub">${escHtml(reg.ambiente)||'—'} · ${escHtml(reg.cliente)||'—'}${reg.lote?' · Lote '+escHtml(reg.lote):''}</p></div>
+        <div style="display:flex;gap:10px">
+          ${reg.lote?`<button class="btn btn-ghost" onclick="ltAplicarLote('${reg.id}')">Aplicar a todo o lote</button>`:''}
+          <button class="btn btn-ghost" onclick="ltVoltar()">Voltar</button></div></div>
+      ${proj?'':'<p class="aviso" style="margin-bottom:14px"><b>Esta linha do painel não tem projeto.</b> Informe o número do projeto no Painel de Controle antes de definir prazos.</p>'}
+      <p class="aviso" style="margin-bottom:14px">Prazo em <b>horas de trabalho</b> (o cronômetro só anda dentro da jornada e para junto com a OP).
+        Deixe em branco para não controlar a atividade. Total definido: <b>${totH?fmtMin(Math.round(totH*60)):'—'}</b>.</p>
+      ${porSetor.map(({S,itens})=>`
+        <section class="fs" style="margin-bottom:14px">
+          <h3 class="fs-title" style="color:${S.cor}">${S.sigla} — ${escHtml(S.nome)}${S.tipo==='lote'?' <i class="tag-lote">por lote</i>':''}</h3>
+          <div class="ltc-l">${itens.map(({a,i})=>{
+            const h=leadHoras(proj,a.atividade), op=ltOpDoRegistro(reg,a), L=op?leadStatus(op):null;
+            return `<div class="ltc-i ${h!=null?'on':''}">
+              <div class="ltc-n"><b>${escHtml(a.atividade)}</b>
+                <span>${op?(ST_OP[stOp(op)].label+' · OP '+escHtml(op.numero||'')
+                            +(op.tempoMin?' · '+fmtMin(op.tempoMin):'')):'OP não emitida'}</span></div>
+              ${L?htmlLeadMini(op):''}
+              <div class="ltc-in">
+                <input class="lt-inp" type="number" min="0" step="0.25" inputmode="decimal"
+                  value="${h!=null?h:''}" placeholder="—"
+                  onchange="ltSalvar('${reg.id}',${i},this.value)"><span>h</span></div>
+            </div>`;}).join('')}</div>
+        </section>`).join('')}
+    </div>`;
+  }
+
+  function ltSalvar(regId,idx,val){
+    const reg=PAINEL.find(r=>r.id===regId); if(!reg) return;
+    const a=todasAtividades()[idx]; if(!a) return;
+    const proj=String(reg.projeto||'').trim();
+    if(!proj){ toast('Esta linha do painel não tem projeto'); renderLead(); return; }
+    const h=parseFloat(String(val==null?'':val).replace(',','.'));
+    const ref=db.ref('leadtimes/'+ltSlug(proj)+'/'+ltSlug(a.atividade));
+    if(!isFinite(h)||h<=0){
+      ref.remove().then(()=>toast('Prazo removido de '+a.atividade)).catch(e=>toast('Erro: '+e.message));
+      return;
+    }
+    ref.set({projeto:proj, atividade:a.atividade, setor:a.setor, horas:h,
+      por:usuarioAtual(), em:new Date().toISOString()})
+      .then(()=>toast(a.atividade+' — prazo de '+fmtMin(Math.round(h*60))))
+      .catch(e=>toast('Erro: '+e.message));
+  }
+  function ltAplicarLote(regId){
+    const reg=PAINEL.find(r=>r.id===regId); if(!reg) return;
+    const proj=String(reg.projeto||'').trim(), lote=String(reg.lote||'').trim();
+    if(!proj||!lote){ toast('Linha sem projeto ou sem lote'); return; }
+    const base=LEADS[ltSlug(proj)]||{};
+    const chaves=Object.keys(base).filter(k=>Number(base[k]&&base[k].horas)>0);
+    if(!chaves.length){ toast('Defina ao menos um prazo antes de copiar'); return; }
+    const alvos=[...new Set(PAINEL.filter(r=>String(r.lote||'').trim()===lote)
+      .map(r=>String(r.projeto||'').trim()).filter(p=>p&&p!==proj))];
+    if(!alvos.length){ toast('Nenhum outro projeto neste lote'); return; }
+    if(!confirm('Copiar '+chaves.length+' prazo(s) do projeto '+proj+' para '+alvos.length
+      +' projeto(s) do lote '+lote+'?\n\nOs prazos já definidos nesses projetos serão substituídos.')) return;
+    const upd={}, agora=new Date().toISOString(), quem=usuarioAtual();
+    alvos.forEach(p=>chaves.forEach(k=>{ const b=base[k];
+      upd['leadtimes/'+ltSlug(p)+'/'+k]={projeto:p, atividade:b.atividade, setor:b.setor,
+        horas:Number(b.horas), por:quem, em:agora}; }));
+    db.ref().update(upd).then(()=>toast('Prazos copiados para o lote '+lote))
+      .catch(e=>toast('Erro: '+e.message));
+  }
+
+  /* ---------- aba 2: painel de atrasos ---------- */
+  function ltHtmlDash(){
+    const itens=OPS.map(o=>({o,L:leadStatus(o)})).filter(x=>x.L);
+    const and=itens.filter(x=>x.L.st==='parcial'||x.L.st==='pausada');
+    const enc=itens.filter(x=>x.L.st==='encerrada');
+    const andAtr=and.filter(x=>x.L.atrasado), encAtr=enc.filter(x=>x.L.atrasado);
+    const aderencia=enc.length?Math.round((enc.length-encAtr.length)/enc.length*100):null;
+    const desvioMedio=enc.length?Math.round(enc.reduce((a,x)=>a+(x.L.gastoMin-x.L.leadMin),0)/enc.length):0;
+    const semLead=OPS.filter(o=>stOp(o)!=='encerrada'&&leadMinOP(o)==null).length;
+
+    const porAtiv={};
+    itens.forEach(({o,L})=>{
+      const r=porAtiv[o.atividade]=porAtiv[o.atividade]||{ativ:o.atividade,setor:o.setor,n:0,atr:0,enc:0,prev:0,real:0};
+      r.n++; if(L.atrasado) r.atr++;
+      if(L.st==='encerrada'){ r.enc++; r.prev+=L.leadMin; r.real+=L.gastoMin; }
+    });
+    const ativs=Object.values(porAtiv).sort((a,b)=>(b.atr-a.atr)||(b.n-a.n));
+
+    let lista=itens;
+    if(LT.filtro==='atr') lista=itens.filter(x=>x.L.atrasado);
+    else if(LT.filtro==='and') lista=and;
+    else if(LT.filtro==='enc') lista=enc;
+    lista=lista.slice().sort((a,b)=>a.L.restSeg-b.L.restSeg);
+
+    const kpi=(k,v,l,cor)=>`<div class="ltk cli ${LT.filtro===k?'on':''}" onclick="LT.filtro=LT.filtro==='${k}'?'':'${k}';renderLead()">
+      <b style="color:${cor}">${v}</b><span>${l}</span></div>`;
+
+    if(!itens.length) return `<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24">${I.pcp}</svg></div>
+      <h3>Nenhuma OP com lead time</h3>
+      <p>Defina os prazos em <b>Cadastro de Lead time</b>. Só as atividades com prazo aparecem aqui.</p>
+      <button class="btn btn-primary" onclick="renderLead('cad')">Ir para o cadastro</button></div>`;
+
+    return `<div class="lt-kpis">
+      ${kpi('atr',andAtr.length,'Atrasadas agora','#c0392b')}
+      ${kpi('and',and.length-andAtr.length,'Em curso no prazo','#1f7a3d')}
+      ${kpi('enc',enc.length,'Encerradas com prazo','var(--texto)')}
+      <div class="ltk"><b style="color:${aderencia==null?'var(--muted)':(aderencia>=80?'#1f7a3d':'#c0392b')}">${aderencia==null?'—':aderencia+'%'}</b>
+        <span>Aderência ao prazo</span></div>
+      <div class="ltk"><b style="color:${desvioMedio>0?'#c0392b':'#1f7a3d'}">${enc.length?(desvioMedio>0?'+':'')+fmtMin(Math.abs(desvioMedio)):'—'}</b>
+        <span>Desvio médio por OP</span></div>
+    </div>
+    ${semLead?`<p class="aviso" style="margin-bottom:14px">${semLead} OP(s) em aberto ainda <b>sem prazo definido</b> — elas não são controladas por lead time.</p>`:''}
+
+    <section class="fs" style="margin-bottom:18px"><h3 class="fs-title">Desempenho por atividade</h3>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th style="width:56px">Setor</th><th>Atividade</th><th style="width:90px">Com prazo</th>
+          <th style="width:96px">Atrasadas</th><th style="width:110px">Previsto (enc.)</th>
+          <th style="width:110px">Realizado (enc.)</th><th style="width:110px">Desvio</th></tr></thead>
+        <tbody>${ativs.map(r=>{ const S=opSetorDe(r.setor), d=r.real-r.prev;
+          return `<tr>
+            <td><span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${escHtml(r.setor)}</span></td>
+            <td class="cel-nome">${escHtml(r.ativ)}</td>
+            <td class="ctr">${r.n}</td>
+            <td class="ctr">${r.atr?`<b style="color:#c0392b">${r.atr}</b>`:'0'}</td>
+            <td class="ctr cel-disc">${r.enc?fmtMin(Math.round(r.prev)):'—'}</td>
+            <td class="ctr cel-disc">${r.enc?fmtMin(Math.round(r.real)):'—'}</td>
+            <td class="ctr">${r.enc?`<span class="lt-des ${d>0?'pos':'neg'}">${(d>0?'+':'-')+fmtMin(Math.abs(Math.round(d)))}</span>`:'—'}</td>
+          </tr>`;}).join('')}</tbody></table></div>
+    </section>
+
+    <section class="fs"><h3 class="fs-title">Ordens com prazo${LT.filtro?' · filtro ativo':''}
+      ${LT.filtro?`<button class="btn btn-ghost btn-sm" style="margin-left:10px" onclick="LT.filtro='';renderLead()">Limpar filtro</button>`:''}</h3>
+      ${lista.length?`<div class="table-wrap"><table class="tbl">
+        <thead><tr><th style="width:26px"></th><th style="width:104px">OP</th><th style="width:86px">Projeto</th>
+          <th style="width:64px">Lote</th><th>Atividade</th><th style="width:130px">Executante</th>
+          <th style="width:86px">Prazo</th><th style="width:96px">Realizado</th>
+          <th style="width:112px">Saldo</th><th style="width:112px">Status</th></tr></thead>
+        <tbody>${lista.map(({o,L})=>{
+          const v=ST_OP[stOp(o)];
+          return `<tr>
+            <td><span class="dot" style="background:${L.atrasado?'#c0392b':'#2f8f46'}"></span></td>
+            <td><span class="op-num">${escHtml(o.numero)}</span></td>
+            <td class="ctr cel-disc">${escHtml(o.projeto)||'—'}</td>
+            <td class="ctr cel-disc">${escHtml(o.lote)||'—'}</td>
+            <td class="cel-nome">${escHtml(o.atividade)}</td>
+            <td class="cel-disc">${escHtml(funcResumo(o,'fim')||funcResumo(o,'inicio'))||'—'}</td>
+            <td class="ctr cel-disc">${fmtMin(L.leadMin)}</td>
+            <td class="ctr cel-disc">${fmtMin(Math.round(L.gastoMin))}</td>
+            <td>${L.st==='encerrada'
+              ? `<span class="lt-des ${L.atrasado?'pos':'neg'}">${(L.atrasado?'+':'-')+fmtMin(Math.abs(Math.round(L.gastoMin-L.leadMin)))}</span>`
+              : htmlLeadMini(o)}</td>
+            <td><span class="st-ro" style="color:${v.cor}">${v.label}</span></td>
+          </tr>`;}).join('')}</tbody></table></div>`
+      :'<p class="aviso">Nenhuma OP neste filtro.</p>'}
+    </section>`;
+  }
+
+  /* ================= OP IMPRESSA ================= */
+  function folhaOP(o){
+    const S=opSetorDe(o.setor), v=ST_OP[stOp(o)];
+    const projs=(o.projetosLote&&o.projetosLote.length)?o.projetosLote:null;
+    const linhasItens=(o.projetosLote||[]).map(r=>`<tr>
+      <td class="mono">${escHtml(r.projeto)||'—'}</td><td>${escHtml(r.cliente)||'—'}</td>
+      <td>${escHtml(r.ambiente)||'—'}</td><td>${escHtml(r.local)||'—'}</td><td>${escHtml(r.consultor)||'—'}</td>
+      <td class="ctr">${escHtml(o.lote)||'—'}</td><td></td></tr>`).join('');
+    const cab='<tr><th style="width:78px">Projeto</th><th>Cliente</th><th>Ambiente</th><th style="width:120px">Local</th><th style="width:110px">Consultor(a)</th><th style="width:56px">Lote</th><th style="width:96px">Conferido</th></tr>';
+    const campo=(l,val)=>`<div class="ol"><span>${l}</span><b>${val||'&nbsp;'}</b></div>`;
+    return `<div class="opz">
+      <div class="opz-top">
+        <img class="opz-logo" src="https://i.postimg.cc/ZKKbdCCF/image-removebg-preview-(18).png" alt="Raldi" onerror="this.style.display='none'">
+        <div class="opz-cx">
+          <div class="opz-t">Ordem de Produção NRO: <b>${escHtml(o.numero)}</b></div>
+          <div class="opz-sub"><span>Grupo de Empresa: <b>Raldi Móveis com Precisão</b></span>
+            <span>Filial: <b>Raldi Móveis com Precisão</b></span></div>
+        </div>
+      </div>
+
+      <div class="opz-corpo">
+        <div class="opz-esq">
+          <div class="ol wide"><span>Atividade:</span><b class="grande">${escHtml(o.atividade)}</b></div>
+          <div class="ol wide"><span>Setor:</span><b>${escHtml(o.setor)} — ${escHtml(S.nome)}</b></div>
+          ${campo('Tipo de OP:',escHtml(TIPO_OP[o.tipo]))}
+          ${campo('Emissão:',fmtData((o.emitidoEm||'').slice(0,10)))}
+          ${campo('Lote:',escHtml(o.lote)||'—')}
+          ${campo(projs?'Projetos:':'Projeto:',projs?projs.length+' no lote':escHtml(o.projeto)||'—')}
+          ${campo('Registros:',(o.projetosLote||[]).length||'—')}
+          ${campo('Situação:',v.label)}
+          ${campo('Jornada:',(o.jornada.ini||'07:30')+' às '+(o.jornada.fim||'18:00'))}
+          ${campo('Intervalos:',intervalosDe(o.jornada).map(i=>i.de+'–'+i.ate).join('  '))}
+          <div class="ol"><span>Real Ini.:</span><b class="lin">____/____/________  ____:____</b></div>
+          <div class="ol"><span>Real Fim:</span><b class="lin">____/____/________  ____:____</b></div>
+        </div>
+        <div class="opz-dir">
+          <div class="opz-bc">${barrasSVG(String(o.numero),380,64)}<span>${escHtml(o.numero)}</span></div>
+        </div>
+      </div>
+
+      <table class="opz-tbl"><thead>${cab}</thead>
+        <tbody>${linhasItens||'<tr><td colspan="7" class="ctr vazio">—</td></tr>'}</tbody></table>
+
+      <div class="opz-op">
+        <div class="opz-oph"><span>Recurso</span><span>Operação</span><span>Apontamento</span></div>
+        <div class="opz-opr">
+          <div class="or-c"><b>OP.APT</b> APONTAMENTO<br>
+            <span class="or-f">Funcionário(s): _________________________________</span></div>
+          <div class="or-c"><b>01</b> INÍCIO DA ATIVIDADE<br>
+            <span class="or-f">Início Real: ____/____/______  ____:____</span></div>
+          <div class="or-b">${barrasSVG('I'+o.numero,240,44)}<span>I${escHtml(o.numero)}</span></div>
+        </div>
+        <div class="opz-opr">
+          <div class="or-c"><b>OP.APT</b> APONTAMENTO<br>
+            <span class="or-f">Funcionário(s): _________________________________</span></div>
+          <div class="or-c"><b>02</b> TÉRMINO DA ATIVIDADE<br>
+            <span class="or-f">Término Real: ____/____/______  ____:____</span></div>
+          <div class="or-b">${barrasSVG('F'+o.numero,240,44)}<span>F${escHtml(o.numero)}</span></div>
+        </div>
+      </div>
+
+      <div class="opz-rod">
+        <div class="orz-obs"><span>Observações</span><div class="orz-l">${escHtml(o.obs)||''}</div></div>
+        <div class="orz-ass"><div><span></span>Executante</div><div><span></span>Conferente</div><div><span></span>Supervisão</div></div>
+      </div>
+      <div class="opz-pe">
+        <span>Raldi Móveis com Precisão · ${EMPRESA.end1} · ${EMPRESA.end3}</span>
+        <span>${escHtml(o.numero)} · emitida em ${fmtData((o.emitidoEm||'').slice(0,10))} por ${escHtml((o.emitidoPor||'').split('@')[0])}</span>
+      </div>
+    </div>`;
+  }
+  function imprimirOP(id){ imprimirOPs([id]); }
+  function imprimirOPs(ids){
+    const lista=ids.map(i=>OPS.find(o=>o.id===i)).filter(Boolean);
+    if(!lista.length){ toast('Nenhuma OP selecionada'); return; }
+    const ov=document.getElementById('fichaOverlay');
+    ov.innerHTML=`<div class="ficha-actions" style="width:min(1100px,100%)">
+        <button class="btn btn-ghost" style="background:#fff" onclick="fecharFicha()">Fechar</button>
+        <button class="btn btn-primary" onclick="window.print()">Imprimir ${lista.length} OP(s)</button></div>
+      <div class="opz-wrap">${lista.map(folhaOP).join('')}</div>`;
+    ov.onclick=e=>{ if(e.target===ov) fecharFicha(); };
+    setPageOrientation('landscape'); ov.classList.add('open');
+  }
+
+
+  Object.defineProperty(window,'ativAberta',{get:()=>ativAberta,set:v=>ativAberta=v});
+  Object.defineProperty(window,'setorAberto',{get:()=>setorAberto,set:v=>setorAberto=v});
+  Object.defineProperty(window,'cardAberto',{get:()=>cardAberto,set:v=>cardAberto=v});
+  Object.defineProperty(window,'buscaAcomp',{get:()=>buscaAcomp,set:v=>buscaAcomp=v});
+  Object.defineProperty(window,'filtroTar',{get:()=>filtroTar,set:v=>filtroTar=v});
+  Object.defineProperty(window,'agendaModo',{get:()=>agendaModo,set:v=>agendaModo=v});
+
+  /* ===== Navegação ===== */
+  const ABAS=[
+    {id:'apont', t:'Apontamento', fn:()=>renderApont()},
+    {id:'painel', t:'Painel de Controle', fn:()=>renderPainel()},
+    {id:'ops', t:'Ordens de Produção', fn:()=>renderOPs()},
+    {id:'acomp', t:'Acompanhamento', fn:()=>renderAcompOP()},
+    {id:'lead', t:'Lead time', fn:()=>renderLead()},
+    {id:'equipe', t:'Equipe Produtiva', fn:()=>renderEquipe()}
+  ];
+  let abaAtual='apont';
+  function montarNav(){
+    document.getElementById('nav').innerHTML=ABAS.map(a=>
+      `<button class="tn ${a.id===abaAtual?'on':''}" onclick="irAba('${a.id}')">${a.t}</button>`).join('');
+  }
+  function irAba(id){ abaAtual=id; montarNav(); (ABAS.find(a=>a.id===id)||ABAS[0]).fn(); }
+
+  /* ===== Sync ===== */
+  let listenersAtivos=false;
+  function ligarListeners(){
+    if(listenersAtivos) return; listenersAtivos=true;
+    db.ref('painel').on('value',s=>{ PAINEL=Object.values(s.val()||{}).sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      if(TELA==='painel'){ const f=document.activeElement, r=f&&f.dataset?f.dataset.r:null, c=f&&f.dataset?f.dataset.c:null;
+        renderPainel(); if(r!=null){ const e2=document.querySelector(`.pl-in[data-r="${r}"][data-c="${c}"]`); if(e2) e2.focus(); } }
+      else if(TELA==='acomp-op') renderAcompOP(); });
+    db.ref('equipe').on('value',s=>{ EQUIPE=Object.values(s.val()||{}).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));
+      if(TELA==='equipe') renderEquipe(); });
+    db.ref('ops').on('value',s=>{ OPS=Object.values(s.val()||{}).sort((a,b)=>String(b.numero||'').localeCompare(String(a.numero||'')));
+      if(TELA==='ops') renderOPs(); else if(TELA==='apont') renderApont();
+      else if(TELA==='apont-op'&&apontOP) abrirApont(apontOP);
+      else if(TELA==='acomp-op') renderAcompOP();
+      else if(TELA==='acomp-det'&&acompDet) detalheAcomp(acompDet);
+      else if(TELA==='painel') renderPainel();
+      else if(TELA==='lead') renderLead(); });
+    db.ref('contadores').on('value',s=>{ CONTADORES=s.val()||{}; });
+    db.ref('leadtimes').on('value',s=>{ LEADS=s.val()||{};
+      const ae=document.activeElement;
+      if(TELA==='lead' && !(ae&&ae.classList&&ae.classList.contains('lt-inp'))) renderLead();
+      else if(TELA==='apont-op'&&apontOP) abrirApont(apontOP); });
+    db.ref('feriados').on('value',s=>{ FERIADOS=s.val()||{}; if(typeof render==='function'&&TELA==null) render(); });
+    db.ref('.info/connected').on('value',s=>{
+      document.getElementById('syncOff').classList.toggle('show', s.val()===false); });
+  }
+
+  /* ===== Auth ===== */
+  const telaLogin=document.getElementById('login'), app=document.getElementById('app');
+  function erroLogin(m){ document.getElementById('lgErr').textContent=m||''; }
+  function traduzErro(c){
+    const m={'auth/invalid-email':'E-mail inválido.','auth/user-not-found':'Usuário não encontrado.',
+      'auth/wrong-password':'Senha incorreta.','auth/invalid-credential':'E-mail ou senha incorretos.',
+      'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.',
+      'auth/network-request-failed':'Sem conexão com a internet.','auth/user-disabled':'Usuário desativado.',
+      'auth/unauthorized-domain':'Este endereço não está autorizado no Firebase. Abra o sistema pelo mesmo endereço do sistema principal.',
+      'auth/operation-not-supported-in-this-environment':'O login não funciona abrindo o arquivo direto do computador. Publique o arquivo (GitHub Pages) e acesse por https://.'};
+    return m[c]||('Não foi possível entrar. ('+(c||'erro desconhecido')+')');
+  }
+  function verSenha(){ const i=document.getElementById('lgSenha'); i.type=i.type==='password'?'text':'password'; }
+  function resetSenha(){
+    const e=(document.getElementById('lgEmail').value||'').trim();
+    if(!e){ erroLogin('Digite seu e-mail acima para receber o link.'); return; }
+    auth.sendPasswordResetEmail(e).then(()=>{ erroLogin(''); toast('Link enviado para '+e); })
+      .catch(err=>erroLogin(traduzErro(err.code)));
+  }
+  function fazerLogin(){
+    const e=(document.getElementById('lgEmail').value||'').trim(), s=document.getElementById('lgSenha').value||'';
+    if(!e||!s){ erroLogin('Preencha e-mail e senha.'); return; }
+    const b=document.getElementById('lgBtn'); b.disabled=true; b.textContent='Entrando...'; erroLogin('');
+    persistenciaPronta.then(()=>auth.signInWithEmailAndPassword(e,s))
+      .catch(err=>{ console.error('Falha no login:',err); erroLogin(traduzErro(err.code)); })
+      .finally(()=>{ b.disabled=false; b.textContent='Entrar'; });
+  }
+  function sairSistema(){ if(confirm('Sair do sistema?')) auth.signOut(); }
+  function tickRelogio(){ const el=document.getElementById('tmRelogio');
+    if(el) el.textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+  setInterval(tickRelogio,10000); tickRelogio();
+  function mostrarTela(el){ [telaLogin,app].forEach(x=>x.classList.remove('active')); el.classList.add('active'); }
+  function diagAmbiente(){
+    const d=document.getElementById('lgDiag'); if(!d) return;
+    if(location.protocol==='file:'){
+      d.className='lg-diag erro';
+      d.innerHTML='<b>Este arquivo foi aberto direto do computador.</b>'+
+        'O login do Firebase só funciona por <b>http://</b> ou <b>https://</b>. '+
+        'Publique este arquivo no mesmo lugar do sistema principal (GitHub Pages) e acesse por lá.';
+      const b=document.getElementById('lgBtn'); if(b){ b.disabled=true; b.textContent='Indisponível em file://'; }
+      return;
+    }
+    d.className='lg-diag ok';
+    d.innerHTML='Conectado a <b>raldi-sistemav1</b> · domínio <b>'+location.hostname+'</b>';
+  }
+  setTimeout(diagAmbiente,120);
+  auth.onAuthStateChanged(u=>{
+    if(u){ document.getElementById('tuMail').textContent=u.email||'';
+      ligarListeners(); mostrarTela(app); montarNav(); irAba(abaAtual); }
+    else{ const f=document.getElementById('loginForm'); if(f) f.reset(); mostrarTela(telaLogin);
+      setTimeout(()=>{const i=document.getElementById('lgEmail'); if(i) i.focus();},80); }
+  });
+
+  // expõe ao window TODAS as funções de topo
+  Object.assign(window,{abrirApont,abrirColar,abrirFeriados,abrirModal,addFeriado,aptosPara,atualizaAtivsFunc,
+    atualizarOps,barrasSVG,code128B,colarPainel,confirmaExtra,confirmaFora,confirmarColar,delFeriado,
+    dentroExpediente,detalheAcomp,diagAmbiente,diasDe,donutSVG,edAtivs,edCampos,editarOP,ehDiaUtil,ehFeriado,
+    equipeOP,erroLogin,escHtml,excluirFunc,excluirOP,fazerLogin,fecharFicha,fecharModal,filtrarOps,finalizarOP,
+    fmtData,fmtDataHora,fmtHora,fmtJornada,fmtMin,folhaOP,formFunc,funcResumo,funcsDe,htmlAtivsFunc,htmlFeriados,
+    impBase,impGrupo,impMarcar,impTodos,imprimirOP,imprimirOPs,imprimirSelecionadas,iniciarOP,intervalosDe,irAba,
+    jdia,jhm,jmin,jover,lerBip,ligarListeners,ligarPaste,linhaPainelVazia,linhasOps,linhasPainel,listaFeriados,
+    minutosPausados,montarNav,mostrarTela,motivoFora,nomesFuncs,normalizaData,opSetorDe,painelAdd,painelExcluir,
+    painelExcluirSel,painelIrLote,painelMarcar,painelMarcarTodos,painelSet,painelTecla,parseGrade,pausaAberta,
+    pausarOP,pausasDe,percorre,previewColar,progressoProjeto,projetosDoLote,vincularLotes,vincularLotePorProjeto,
+    removerFeriado,renderAcompOP,renderApont,
+    renderEquipe,renderImprimir,renderOPs,renderPainel,resetSenha,retomarOP,sairSistema,salvarEdicaoOP,salvarFeriado,
+    salvarFunc,setPageOrientation,stOp,tempoExtraOP,tempoHoraExtra,tempoLiquido,tempoNormalOP,tempoTotalOP,
+    tempoTrabalhado,tickRelogio,toast,todasAtividades,togFunc,totalPausas,traduzErro,usuarioAtual,verSenha});
+
+
+  Object.assign(window,{indiceEmissao,emissaoDe,badgeEmissao,painelDetalheEmissao,painelIrStatus});
+
+  // Lead time e hora extra
+  Object.assign(window,{LT,renderLead,ltAbrir,ltVoltar,ltSalvar,ltAplicarLote,ltTelaProjeto,
+    ltHtmlCadastro,ltHtmlDash,ltQtdProjeto,ltResumoProjeto,ltOpDoRegistro,ltSlug,
+    leadHoras,leadMinOP,leadStatus,fmtCron,tickLead,htmlLead,htmlLeadMini,htmlExtra,htmlExtraResumo,
+    iniciarExtra,finalizarExtra,extrasDe,extraAberta,foraJornada});
+
+  // ===== PWA: service worker (instalação e atualização automática) =====
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('./sw.js').then(reg=>{
+        reg.addEventListener('updatefound',()=>{
+          const nv=reg.installing;
+          if(nv) nv.addEventListener('statechange',()=>{
+            if(nv.state==='installed'&&navigator.serviceWorker.controller) nv.postMessage({tipo:'ativar'});
+          });
+        });
+      }).catch(err=>console.warn('SW não registrado:',err));
+    });
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(window.__recarregando) return; window.__recarregando=true; location.reload();
+    });
+  }
+</script>
+</body>
+</html>
