@@ -1211,7 +1211,7 @@
     if(!o||!o.inicio||!o.inicio.em) return 0;
     const f=ate||(o.fim&&o.fim.em)||new Date().toISOString();
     const bruto=tempoTrabalhado(o.inicio.em,f,o.jornada,true);
-    const pausado=pausasDe(o).reduce((a,p)=>a+((p&&p.de)?tempoTrabalhado(p.de,p.ate||f,o.jornada,true):0),0);
+    const pausado=pausasEfetivas(o).reduce((a,p)=>a+((p&&p.de)?tempoTrabalhado(p.de,p.ate||f,o.jornada,true):0),0);
     return _rd(exato,Math.max(0,bruto-pausado));
   }
   /* ===== Hora extra por SESSÃO =============================================
@@ -1234,7 +1234,7 @@
         const sf=s.ate||f;
         if(!(sf>s.de)) return;
         let b=tempoHoraExtra(s.de,sf,o.jornada,true);
-        pausasDe(o).forEach(p=>{
+        pausasEfetivas(o).forEach(p=>{
           if(!p||!p.de) return;
           const pa=p.ate||f;
           const pi=(p.de>s.de)?p.de:s.de, pf=(pa<sf)?pa:sf;
@@ -1246,7 +1246,7 @@
     }
     if(!o.extra) return 0;
     const bruto=tempoHoraExtra(o.inicio.em,f,o.jornada,true);
-    const pausado=pausasDe(o).reduce((a,p)=>a+((p&&p.de)?tempoHoraExtra(p.de,p.ate||f,o.jornada,true):0),0);
+    const pausado=pausasEfetivas(o).reduce((a,p)=>a+((p&&p.de)?tempoHoraExtra(p.de,p.ate||f,o.jornada,true):0),0);
     return _rd(exato,Math.max(0,bruto-pausado));
   }
   function tempoTotalOP(o,ate,exato){
@@ -1319,6 +1319,20 @@
   // pausas: [{de:ISO, ate:ISO|null, func, por}]
   function pausasDe(o){ const p=o&&o.pausas; return p?(Array.isArray(p)?p:Object.values(p)):[]; }
   function pausaAberta(o){ return pausasDe(o).find(p=>p&&p.de&&!p.ate)||null; }
+  /* Pausas validas para o apontamento atual. Rede de seguranca contra dado
+     sujo (OP resetada/editada que ficou com pausa de um apontamento
+     anterior): pausa encerrada antes do inicio atual e descartada, e pausa
+     que comecou antes do inicio e cortada no inicio. */
+  function pausasEfetivas(o){
+    const ini=o&&o.inicio&&o.inicio.em;
+    const lista=pausasDe(o).filter(p=>p&&p.de);
+    if(!ini) return lista;
+    return lista.reduce((acc,p)=>{
+      if(p.ate&&p.ate<=ini) return acc;
+      acc.push(p.de<ini?{...p,de:ini}:p);
+      return acc;
+    },[]);
+  }
   function minutosPausados(o,ateISO){
     const fim=ateISO||new Date().toISOString();
     return pausasDe(o).reduce((a,p)=>{
@@ -1352,7 +1366,7 @@
       .then(()=>{ toast('OP retomada'); })
       .catch(e=>toast('Erro: '+e.message));
   }
-  function totalPausas(o){ return pausasDe(o).length; }
+  function totalPausas(o){ return pausasEfetivas(o).length; }
 
 
   /* ---- Hora extra: sessões declaradas pelo operador ---- */
@@ -2010,7 +2024,16 @@
     const upd={setor:g('edSetor'),atividade:g('edAtiv'),projeto:g('edProj').trim(),
       lote:g('edLote').trim(),obs:g('edObs'),status:st,
       editadoEm:new Date().toISOString(),editadoPor:usuarioAtual()};
-    if(st==='nao'){ upd.inicio=null; upd.fim=null; upd.tempoMin=null; }
+    if(st==='nao'){
+      // Reset de verdade: apaga tambem pausas, horas extra e tempos ja
+      // calculados. Sem isso a OP volta a "Nao iniciada" mas continua com
+      // pausas antigas no banco, e ao iniciar de novo o tempo nasce
+      // descontado (fica travado em 0min com horas pausadas).
+      upd.inicio=null; upd.fim=null; upd.tempoMin=null;
+      upd.pausas=null; upd.extras=null;
+      upd.tempoNormalMin=null; upd.tempoExtraMin=null; upd.tempoPausaMin=null;
+      upd.leadDesvioMin=null; upd.foraExpediente=false; upd.extra=false;
+    }
     else{
       const ini=g('edIni'); if(!ini){ toast('Informe o início real'); return; }
       const iniISO=new Date(ini).toISOString();
@@ -2486,7 +2509,7 @@
               <b class="aa-t">${fmtMin(decorrido)}</b></div>
           </div>
           ${totalPausas(o)?`<div class="ap-pausas">
-            ${pausasDe(o).map((pp,pi)=>`<div class="app-l">
+            ${pausasEfetivas(o).map((pp,pi)=>`<div class="app-l">
               <span class="app-n">${pi+1}</span>
               <span class="app-h">${fmtHora(pp.de)} → ${pp.ate?fmtHora(pp.ate):'<b>em curso</b>'}</span>
               <span class="app-t">${fmtMin(tempoTrabalhado(pp.de,pp.ate||new Date().toISOString(),o.jornada))}</span>
@@ -3018,7 +3041,7 @@
     jdia,jhm,jmin,jover,lerBip,ligarListeners,ligarPaste,linhaPainelVazia,linhasOps,linhasPainel,listaFeriados,
     minutosPausados,montarNav,mostrarTela,motivoFora,nomesFuncs,normalizaData,opSetorDe,painelAdd,painelExcluir,
     painelExcluirSel,painelIrLote,painelMarcar,painelMarcarTodos,painelSet,painelTecla,parseGrade,pausaAberta,
-    pausarOP,pausasDe,percorre,previewColar,progressoProjeto,projetosDoLote,vincularLotes,vincularLotePorProjeto,
+    pausarOP,pausasDe,pausasEfetivas,percorre,previewColar,progressoProjeto,projetosDoLote,vincularLotes,vincularLotePorProjeto,
     removerFeriado,renderAcompOP,renderApont,
     renderEquipe,renderImprimir,renderOPs,renderPainel,resetSenha,retomarOP,sairSistema,salvarEdicaoOP,salvarFeriado,
     salvarFunc,setPageOrientation,stOp,tempoExtraOP,tempoHoraExtra,tempoLiquido,tempoNormalOP,tempoTotalOP,
