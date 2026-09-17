@@ -704,12 +704,26 @@
   .bip-in{ font-family:ui-monospace,monospace; font-size:22px; font-weight:700; text-align:center; letter-spacing:.1em;
     padding:14px 18px; border:2px solid var(--linha); border-radius:11px; width:min(340px,100%); color:var(--texto); }
   .bip-in:focus{ outline:0; border-color:var(--vermelho); background:#fffdf8; }
-  .and-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
-  .and-c{ text-align:left; font:inherit; background:#fff; border:1px solid var(--linha); border-left:3px solid #d4930d;
+  /* Em andamento agora — colunas por atividade, lado a lado, agrupadas por disciplina */
+  .kb-nome{ font-size:11.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--texto); flex:1; line-height:1.3; }
+  .kb-qtd{ font-size:11px; font-weight:700; background:rgba(75,75,85,.09); color:var(--texto); padding:2px 8px; border-radius:999px; }
+  .and-kanban{ display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; align-items:flex-start; }
+  .and-kb-col{ flex:0 0 236px; background:#e6e5dd; border:1px solid var(--linha); border-radius:12px; }
+  .and-kb-head{ display:block; padding:9px 12px 10px; border-radius:11px 11px 0 0; border-bottom:2px solid var(--sc,var(--vermelho)); }
+  .and-kb-grupo{ font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--sc,var(--muted)); margin-bottom:2px; }
+  .and-kb-linha{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .and-kb-linha .kb-nome{ color:var(--texto); }
+  .and-kb-body{ padding:9px; display:flex; flex-direction:column; gap:8px; }
+  .and-c{ text-align:left; font:inherit; background:#fff; border:1px solid var(--linha); border-left:3px solid var(--sc,#d4930d);
     border-radius:10px; padding:13px 15px; cursor:pointer; transition:box-shadow .15s; }
   .and-c:hover{ box-shadow:0 6px 18px rgba(75,75,85,.12); }
+  .and-c-pausada{ opacity:.72; }
+  .and-pill-pausa{ font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted);
+    background:rgba(75,75,85,.08); padding:2px 7px; border-radius:999px; }
+  @media(max-width:640px){ .and-kb-col{ flex-basis:206px; } }
   .ac-t{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .ac-a{ font-size:14px; font-weight:700; color:var(--texto); margin-top:6px; }
+  .ac-cli{ font-size:11.5px; font-weight:600; color:var(--texto); margin-top:4px; }
   .ac-f{ font-size:11.5px; color:var(--muted); margin-top:3px; }
   .ac-tm{ font-size:17px; font-weight:700; color:#d4930d; margin-top:8px; }
   .ap-card{ background:var(--surface); border:1px solid var(--linha); border-radius:14px; padding:22px; max-width:660px; margin:0 auto; }
@@ -1441,6 +1455,15 @@
   }
 
   function opSetorDe(sig){ return OP_SETORES[sig]||OP_SETORES.SL; }
+  function opClienteAmbiente(o){
+    const pl=o.projetosLote||[];
+    if(!pl.length) return '';
+    if(o.tipo==='lote'){
+      if(pl.length===1) return [pl[0].cliente,pl[0].ambiente].filter(Boolean).join(' · ');
+      return pl.length+' projetos do lote';
+    }
+    return [pl[0].cliente,pl[0].ambiente].filter(Boolean).join(' · ');
+  }
 
   /* ================= 1. PAINEL DE CONTROLE ================= */
   const P_COLS=[
@@ -2420,17 +2443,40 @@
       </div>
       ${OPS.filter(o=>['parcial','pausada'].includes(stOp(o))).length?`
       <section class="fs" style="margin-top:20px"><h3 class="fs-title">Em andamento agora</h3>
-        <div class="and-grid">${OPS.filter(o=>['parcial','pausada'].includes(stOp(o))).map(o=>{
-          const S=opSetorDe(o.setor);
-          return `<button class="and-c" onclick="abrirApont('${o.id}')">
-            <div class="ac-t"><span class="op-num">${escHtml(o.numero)}</span>
-              <span class="set-pill" style="background:${S.cor}22;color:${S.cor}">${escHtml(o.setor)}</span></div>
-            <div class="ac-a">${escHtml(o.atividade)}</div>
-            <div class="ac-f">${escHtml(funcResumo(o,'inicio'))} · desde ${fmtHora(o.inicio&&o.inicio.em)}</div>
-            <div class="ac-tm">${fmtMin(tempoLiquido(o,new Date().toISOString()))} ${htmlLeadMini(o)}</div>
-          </button>`;}).join('')}</div></section>`:''}
+        ${andamentoPorSetor()}
+      </section>`:''}
     </div>`;
     setTimeout(()=>{const i=document.getElementById('bipIn'); if(i) i.focus();},60);
+  }
+  function andamentoPorSetor(){
+    const todas=OPS.filter(o=>['parcial','pausada'].includes(stOp(o)));
+    const cols=Object.values(OP_SETORES).map(S=>{
+      const doSetor=todas.filter(o=>o.setor===S.sigla);
+      if(!doSetor.length) return '';
+      const ativs=[...new Set([...S.atividades,...doSetor.map(o=>o.atividade)])];
+      return ativs.map(at=>{
+        const lista=doSetor.filter(o=>o.atividade===at);
+        if(!lista.length) return '';
+        return `<div class="and-kb-col" style="--sc:${S.cor}">
+          <div class="kb-head and-kb-head">
+            <div class="and-kb-grupo">${escHtml(S.nome)}</div>
+            <div class="and-kb-linha"><span class="kb-nome">${escHtml(at)}</span><span class="kb-qtd">${lista.length}</span></div>
+          </div>
+          <div class="and-kb-body">
+            ${lista.map(o=>{
+              const pausada=stOp(o)==='pausada';
+              return `<button class="and-c${pausada?' and-c-pausada':''}" style="--sc:${S.cor}" onclick="abrirApont('${o.id}')">
+                <div class="ac-t"><span class="op-num">${escHtml(o.numero)}</span>
+                  ${pausada?'<span class="and-pill-pausa">pausada</span>':''}</div>
+                ${opClienteAmbiente(o)?`<div class="ac-cli">${escHtml(opClienteAmbiente(o))}</div>`:''}
+                <div class="ac-f">${escHtml(funcResumo(o,'inicio'))} · desde ${fmtHora(o.inicio&&o.inicio.em)}</div>
+                <div class="ac-tm">${fmtMin(tempoLiquido(o,new Date().toISOString()))} ${htmlLeadMini(o)}</div>
+              </button>`;
+            }).join('')}
+          </div></div>`;
+      }).join('');
+    }).join('');
+    return `<div class="and-kanban">${cols}</div>`;
   }
   function lerBip(cod){
     cod=String(cod||'').trim().toUpperCase();
